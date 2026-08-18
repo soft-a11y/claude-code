@@ -1,0 +1,883 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--FRAG-->
+<title>Prisme</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+@property --pg-angle { syntax: "<angle>"; inherits: false; initial-value: 128deg; }
+
+:root{
+  --ground:#EDEFF3;
+  --surface:#FFFFFF;
+  --surface-2:#F5F7FA;
+  --ink:#12141A;
+  --ink-2:#525A6B;
+  --line:#D9DEE7;
+  --line-strong:#BFC6D4;
+  --shadow:0 1px 2px rgba(18,20,26,.06), 0 12px 32px -18px rgba(18,20,26,.35);
+  --ok:#0F6E4F; --warn:#8A5A05; --bad:#A32828;
+
+  --accent-l:#0F5F66; --accent-d:#7ED8D2;
+  --accent-ink-l:#FFFFFF; --accent-ink-d:#0D0F14;
+  --accent:var(--accent-l);
+  --accent-ink:var(--accent-ink-l);
+
+  --r:10px;
+  --sp:clamp(1rem, 2.2vw, 1.5rem);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0D0F14;
+    --surface:#14171E;
+    --surface-2:#1A1E27;
+    --ink:#ECEFF5;
+    --ink-2:#98A0B2;
+    --line:#262B36;
+    --line-strong:#39404E;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 16px 40px -20px rgba(0,0,0,.8);
+    --ok:#5FCFA3; --warn:#E0B25B; --bad:#F09090;
+    --accent:var(--accent-d);
+    --accent-ink:var(--accent-ink-d);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0D0F14;
+  --surface:#14171E;
+  --surface-2:#1A1E27;
+  --ink:#ECEFF5;
+  --ink-2:#98A0B2;
+  --line:#262B36;
+  --line-strong:#39404E;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 16px 40px -20px rgba(0,0,0,.8);
+  --ok:#5FCFA3; --warn:#E0B25B; --bad:#F09090;
+  --accent:var(--accent-d);
+  --accent-ink:var(--accent-ink-d);
+}
+
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:"Archivo","Helvetica Neue",Arial,sans-serif;
+  font-size:15px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{margin:0;text-wrap:balance}
+button,input,select{font:inherit;color:inherit}
+
+:where(a,button,input,select,[tabindex]):focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+  border-radius:4px;
+}
+
+.wrap{max-width:1240px;margin:0 auto;padding:var(--sp) var(--sp) 3rem}
+
+/* ---------- en-tête ---------- */
+.masthead{
+  display:flex;flex-wrap:wrap;align-items:flex-end;gap:1rem 2rem;
+  padding:1.6rem 0 1.4rem;border-bottom:1px solid var(--line);margin-bottom:var(--sp);
+}
+.eyebrow{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);
+  display:block;margin-bottom:.35rem;
+}
+.title{
+  font-family:"Instrument Serif",Georgia,serif;
+  font-weight:400;font-size:clamp(2.4rem,5.5vw,3.4rem);line-height:.95;letter-spacing:-.01em;
+}
+.title em{font-style:italic;color:var(--accent);transition:color .4s ease}
+.lede{margin:0;max-width:46ch;color:var(--ink-2);font-size:.92rem}
+
+/* ---------- établi ---------- */
+.workbench{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:var(--sp);align-items:start}
+@media (max-width:940px){.workbench{grid-template-columns:1fr}}
+
+.stage{display:flex;flex-direction:column;gap:var(--sp);min-width:0}
+.rail{display:flex;flex-direction:column;gap:.9rem;min-width:0}
+
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--shadow);
+}
+.panel{padding:.95rem 1rem 1.1rem}
+.panel-head{
+  display:flex;align-items:baseline;justify-content:space-between;gap:.75rem;margin-bottom:.85rem;
+}
+.panel-title{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:.64rem;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-2);font-weight:500;
+}
+.panel-note{font-size:.7rem;color:var(--ink-2)}
+
+/* ---------- toile ---------- */
+.canvas{
+  position:relative;border-radius:var(--r);overflow:hidden;
+  border:1px solid var(--line);box-shadow:var(--shadow);
+  aspect-ratio:16/10;min-height:260px;
+}
+@media (max-width:520px){.canvas{aspect-ratio:4/3}}
+#paint{position:absolute;inset:0;background-repeat:no-repeat}
+.legib{
+  position:absolute;inset:0;display:none;
+  flex-direction:column;justify-content:space-between;padding:clamp(1rem,3vw,2rem);
+  pointer-events:none;
+}
+.legib[data-on="1"]{display:flex}
+.legib p{margin:0;font-size:clamp(1rem,2.4vw,1.5rem);line-height:1.3;max-width:22ch;font-weight:500}
+.legib .lt{color:#FFFFFF}
+.legib .dk{color:#111111;align-self:flex-end;text-align:right}
+
+/* ---------- rail d'arrêts ---------- */
+.track-shell{padding:.9rem 1rem 1rem}
+.track{
+  position:relative;height:34px;border-radius:8px;border:1px solid var(--line-strong);
+  margin:.2rem 0 1.5rem;touch-action:none;
+}
+.thumb{
+  position:absolute;top:-5px;width:18px;height:44px;margin-left:-9px;padding:0;
+  border-radius:6px;border:2px solid var(--surface);
+  box-shadow:0 0 0 1px var(--line-strong), 0 3px 8px -2px rgba(0,0,0,.45);
+  cursor:grab;background:currentColor;
+}
+.thumb[aria-selected="true"]{
+  box-shadow:0 0 0 2px var(--accent), 0 3px 10px -2px rgba(0,0,0,.5);
+  z-index:2;
+}
+.thumb:active{cursor:grabbing}
+.hint{font-size:.72rem;color:var(--ink-2);margin:0}
+
+/* ---------- contrôles ---------- */
+.field{display:flex;flex-direction:column;gap:.3rem;margin-bottom:.8rem}
+.field:last-child{margin-bottom:0}
+.field label,.lbl{
+  font-size:.74rem;color:var(--ink-2);display:flex;justify-content:space-between;gap:.5rem;align-items:baseline;
+}
+.val{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.72rem;color:var(--ink);font-variant-numeric:tabular-nums}
+
+.seg{display:flex;gap:4px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:3px}
+.seg button{
+  flex:1;padding:.4rem .3rem;border:0;background:transparent;border-radius:6px;cursor:pointer;
+  font-size:.78rem;color:var(--ink-2);transition:background .15s ease,color .15s ease;
+}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:500}
+
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;cursor:pointer;margin:0;
+}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--line-strong)}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--line-strong)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);
+  border:2px solid var(--surface);margin-top:-6px;box-shadow:0 1px 3px rgba(0,0,0,.35);
+}
+input[type=range]::-moz-range-thumb{
+  width:16px;height:16px;border:2px solid var(--surface);border-radius:50%;background:var(--accent);
+}
+
+select,input[type=text],input[type=number]{
+  background:var(--surface-2);border:1px solid var(--line);border-radius:7px;padding:.42rem .55rem;width:100%;
+}
+input[type=text],input[type=number]{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.78rem}
+input[type=color]{
+  -webkit-appearance:none;appearance:none;width:34px;height:30px;padding:0;border:1px solid var(--line-strong);
+  border-radius:7px;background:none;cursor:pointer;flex:none;
+}
+input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
+input[type=color]::-webkit-color-swatch{border:0;border-radius:5px}
+input[type=color]::-moz-color-swatch{border:0;border-radius:5px}
+
+.stop-row{display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem}
+.stop-row .hex{flex:1 1 auto;min-width:0;text-transform:uppercase}
+.stop-row .pos{width:64px;flex:none}
+
+.btn{
+  border:1px solid var(--line-strong);background:var(--surface-2);border-radius:7px;
+  padding:.4rem .7rem;cursor:pointer;font-size:.8rem;transition:border-color .15s ease,background .15s ease;
+}
+.btn:hover{border-color:var(--accent);background:var(--surface)}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.btn-icon{width:30px;height:30px;padding:0;flex:none;line-height:1;font-size:1rem;color:var(--ink-2)}
+.btn-icon:hover{color:var(--bad);border-color:var(--bad)}
+.btn-row{display:flex;gap:.4rem;margin-top:.7rem}
+.btn-row .btn{flex:1}
+
+.switch{display:flex;align-items:center;gap:.55rem;cursor:pointer;font-size:.82rem}
+.switch input{width:16px;height:16px;accent-color:var(--accent);margin:0;flex:none}
+
+/* ---------- modèles ---------- */
+.presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:.5rem}
+.preset{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:none;padding:0;cursor:pointer;text-align:left}
+.preset:hover{border-color:var(--accent)}
+.preset .swatch{height:38px;display:block}
+.preset .nm{display:block;padding:.3rem .45rem;font-size:.7rem;color:var(--ink-2)}
+
+/* ---------- lisibilité ---------- */
+.ratios{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.7rem}
+.ratio{border:1px solid var(--line);border-radius:8px;padding:.5rem .6rem;background:var(--surface-2)}
+.ratio .who{font-size:.7rem;color:var(--ink-2)}
+.ratio .num{
+  font-family:"JetBrains Mono",ui-monospace,monospace;font-size:1.15rem;font-variant-numeric:tabular-nums;
+  display:block;margin:.1rem 0 .2rem;
+}
+.tag{
+  display:inline-block;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.62rem;
+  letter-spacing:.06em;padding:.12rem .38rem;border-radius:4px;border:1px solid currentColor;
+}
+.tag.pass{color:var(--ok)}
+.tag.mid{color:var(--warn)}
+.tag.fail{color:var(--bad)}
+
+/* ---------- sortie ---------- */
+.code{
+  margin:0;padding:1rem;overflow-x:auto;background:var(--surface-2);
+  border-top:1px solid var(--line);border-radius:0 0 var(--r) var(--r);
+  font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.74rem;line-height:1.65;white-space:pre;
+}
+.out-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.75rem 1rem}
+
+.rm-note{
+  display:none;gap:.6rem;align-items:center;font-size:.74rem;color:var(--ink-2);
+  border:1px dashed var(--line-strong);border-radius:8px;padding:.5rem .65rem;margin-top:.7rem;
+}
+@media (prefers-reduced-motion: reduce){.rm-note{display:flex}}
+
+.toast{
+  position:fixed;left:50%;bottom:1.4rem;transform:translate(-50%,140%);
+  background:var(--ink);color:var(--ground);padding:.55rem 1rem;border-radius:999px;font-size:.8rem;
+  box-shadow:var(--shadow);transition:transform .28s cubic-bezier(.2,.9,.3,1.2);z-index:10;
+}
+.toast[data-on="1"]{transform:translate(-50%,0)}
+@media (prefers-reduced-motion: reduce){.toast{transition:none}}
+
+footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-size:.74rem;color:var(--ink-2)}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+</style>
+</head>
+<body>
+<!--/HEADFRAG-->
+<div class="wrap">
+
+  <header class="masthead">
+    <div>
+      <span class="eyebrow">Générateur de dégradés CSS</span>
+      <h1 class="title">Pr<em>i</em>sme</h1>
+    </div>
+    <p class="lede">Composez un dégradé, mettez-le en mouvement, vérifiez sa lisibilité, copiez le CSS. Rien à installer.</p>
+  </header>
+
+  <main class="workbench">
+
+    <!-- ============ scène ============ -->
+    <div class="stage">
+      <div class="canvas">
+        <div id="paint"></div>
+        <div class="legib" id="legib" aria-hidden="true">
+          <p class="lt">Texte blanc sur le dégradé</p>
+          <p class="dk">Texte noir sur le dégradé</p>
+        </div>
+      </div>
+
+      <section class="card track-shell" aria-labelledby="t-track">
+        <div class="panel-head">
+          <h2 class="panel-title" id="t-track">Arrêts de couleur</h2>
+          <span class="panel-note">Glissez, ou flèches ← → au clavier</span>
+        </div>
+        <div class="track" id="track"></div>
+        <p class="hint">Cliquez sur le rail pour ajouter un arrêt (6 maximum).</p>
+      </section>
+
+      <section class="card" aria-labelledby="t-css">
+        <div class="out-head">
+          <h2 class="panel-title" id="t-css">CSS généré</h2>
+          <button class="btn" id="copy" type="button">Copier le CSS</button>
+        </div>
+        <pre class="code" id="css" tabindex="0"></pre>
+      </section>
+    </div>
+
+    <!-- ============ rail de réglages ============ -->
+    <aside class="rail">
+
+      <section class="card panel" aria-labelledby="t-geo">
+        <div class="panel-head"><h2 class="panel-title" id="t-geo">Forme</h2></div>
+
+        <div class="field">
+          <span class="lbl" id="l-type">Type de dégradé</span>
+          <div class="seg" role="group" aria-labelledby="l-type">
+            <button type="button" data-type="linear" aria-pressed="true">Linéaire</button>
+            <button type="button" data-type="radial" aria-pressed="false">Radial</button>
+            <button type="button" data-type="conic" aria-pressed="false">Conique</button>
+          </div>
+        </div>
+
+        <div class="field" id="f-angle">
+          <label for="angle">Angle <span class="val" id="v-angle">128°</span></label>
+          <input type="range" id="angle" min="0" max="360" step="1" value="128">
+        </div>
+
+        <div class="field" id="f-shape" hidden>
+          <span class="lbl" id="l-shape">Forme du foyer</span>
+          <div class="seg" role="group" aria-labelledby="l-shape">
+            <button type="button" data-shape="circle" aria-pressed="true">Cercle</button>
+            <button type="button" data-shape="ellipse" aria-pressed="false">Ellipse</button>
+          </div>
+        </div>
+
+        <div class="field" id="f-pos" hidden>
+          <label for="px">Centre X <span class="val" id="v-px">50 %</span></label>
+          <input type="range" id="px" min="0" max="100" step="1" value="50">
+          <label for="py">Centre Y <span class="val" id="v-py">50 %</span></label>
+          <input type="range" id="py" min="0" max="100" step="1" value="50">
+        </div>
+      </section>
+
+      <section class="card panel" aria-labelledby="t-col">
+        <div class="panel-head">
+          <h2 class="panel-title" id="t-col">Couleurs</h2>
+          <span class="panel-note" id="stopcount">3 arrêts</span>
+        </div>
+        <div id="stops"></div>
+        <div class="btn-row">
+          <button class="btn" type="button" id="add">Ajouter un arrêt</button>
+          <button class="btn" type="button" id="shuffle">Mélanger</button>
+        </div>
+      </section>
+
+      <section class="card panel" aria-labelledby="t-anim">
+        <div class="panel-head"><h2 class="panel-title" id="t-anim">Animation</h2></div>
+
+        <div class="field">
+          <label for="anim">Mouvement</label>
+          <select id="anim">
+            <option value="none">Aucun — dégradé fixe</option>
+            <option value="flux">Flux — le dégradé glisse</option>
+            <option value="rotation">Rotation — l'angle tourne</option>
+            <option value="pulsation">Pulsation — le dégradé respire</option>
+            <option value="spectre">Spectre — les teintes défilent</option>
+          </select>
+          <p class="hint" id="anim-note" style="margin-top:.35rem"></p>
+        </div>
+
+        <div id="anim-opts" hidden>
+          <div class="field">
+            <label for="dur">Durée <span class="val" id="v-dur">12 s</span></label>
+            <input type="range" id="dur" min="1" max="40" step="0.5" value="12">
+          </div>
+          <div class="field">
+            <label for="ease">Courbe</label>
+            <select id="ease">
+              <option value="ease-in-out">ease-in-out — souple</option>
+              <option value="linear">linear — régulier</option>
+              <option value="ease">ease — départ vif</option>
+              <option value="cubic-bezier(.65,0,.35,1)">cubic-bezier — marqué</option>
+            </select>
+          </div>
+          <label class="switch"><input type="checkbox" id="alt" checked> Aller-retour</label>
+          <div class="rm-note">
+            <span>Votre système demande moins d'animations : l'aperçu et le CSS exporté respectent ce réglage.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card panel" aria-labelledby="t-a11y">
+        <div class="panel-head">
+          <h2 class="panel-title" id="t-a11y">Lisibilité</h2>
+          <span class="panel-note">WCAG 2.1</span>
+        </div>
+        <label class="switch"><input type="checkbox" id="legib-on"> Superposer du texte d'essai</label>
+        <div class="ratios">
+          <div class="ratio">
+            <span class="who">Texte blanc</span>
+            <span class="num" id="r-light">—</span>
+            <span class="tag" id="b-light">—</span>
+          </div>
+          <div class="ratio">
+            <span class="who">Texte noir</span>
+            <span class="num" id="r-dark">—</span>
+            <span class="tag" id="b-dark">—</span>
+          </div>
+        </div>
+        <p class="hint" style="margin-top:.6rem">Pire contraste mesuré sur l'ensemble du dégradé. AA exige 4,5 pour le texte courant, 3 pour le grand texte.</p>
+      </section>
+
+      <section class="card panel" aria-labelledby="t-pre">
+        <div class="panel-head"><h2 class="panel-title" id="t-pre">Modèles</h2></div>
+        <div class="presets" id="presets"></div>
+      </section>
+
+    </aside>
+  </main>
+
+  <footer>
+    <p>Prisme génère du CSS standard : <code>linear-gradient</code>, <code>radial-gradient</code>, <code>conic-gradient</code>. La rotation d'angle s'appuie sur <code>@property</code> (Chrome, Edge, Safari 16.4+, Firefox 128+) ; sans ce support, le dégradé reste fixe mais s'affiche correctement.</p>
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<style id="live"></style>
+
+<script>
+(function(){
+  "use strict";
+
+  var PRESETS = [
+    {n:"Aurore",     t:"linear", a:160, s:[["#0A1E3C",0],["#12695F",46],["#8CE0A8",100]]},
+    {n:"Braise",     t:"linear", a:35,  s:[["#2B0B16",0],["#B4341C",55],["#F2B33D",100]]},
+    {n:"Marée",      t:"linear", a:200, s:[["#E8DCC2",0],["#6FBFB6",60],["#123A54",100]]},
+    {n:"Néon",       t:"conic",  a:0,   s:[["#FF3D9A",0],["#3B2ED0",34],["#22D3EE",68],["#FF3D9A",100]]},
+    {n:"Argile",     t:"radial", a:0,   s:[["#F6EFE7",0],["#D4A373",62],["#6B4423",100]]},
+    {n:"Encre",      t:"linear", a:128, s:[["#111827",0],["#374151",50],["#9CA3AF",100]]}
+  ];
+
+  var NOTES = {
+    none:      "Le dégradé reste immobile.",
+    flux:      "Le dégradé est agrandi puis déplacé : le mouvement reste très fluide.",
+    rotation:  "L'angle tourne. Sur un dégradé radial, seule la position du centre compte : choisissez linéaire ou conique.",
+    pulsation: "La taille du dégradé oscille, comme une respiration.",
+    spectre:   "Un filtre hue-rotate fait défiler toutes les teintes."
+  };
+
+  var S = {
+    type:"linear", angle:128, px:50, py:50, shape:"circle",
+    stops:[{c:"#0B3B6F",p:0},{c:"#1FA8A0",p:52},{c:"#F2E7C9",p:100}],
+    anim:"none", dur:12, ease:"ease-in-out", alt:true, sel:0, legib:false
+  };
+
+  var $ = function(id){ return document.getElementById(id); };
+  var clamp = function(v,a,b){ return Math.min(b,Math.max(a,v)); };
+  var round1 = function(v){ return Math.round(v*10)/10; };
+
+  /* ---------- couleur ---------- */
+  function hex2rgb(h){
+    h = h.replace("#","");
+    if(h.length===3){ h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2]; }
+    return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  }
+  function rgb2hex(r,g,b){
+    return "#" + [r,g,b].map(function(v){
+      return clamp(Math.round(v),0,255).toString(16).padStart(2,"0");
+    }).join("").toUpperCase();
+  }
+  function isHex(v){ return /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v.trim()); }
+  function normHex(v){
+    v = v.trim(); if(v[0] !== "#"){ v = "#" + v; }
+    if(v.length===4){ v = "#"+v[1]+v[1]+v[2]+v[2]+v[3]+v[3]; }
+    return v.toUpperCase();
+  }
+  function hsl2hex(h,s,l){
+    h=((h%360)+360)%360; s/=100; l/=100;
+    var c=(1-Math.abs(2*l-1))*s, x=c*(1-Math.abs((h/60)%2-1)), m=l-c/2, r=0,g=0,b=0;
+    if(h<60){r=c;g=x;} else if(h<120){r=x;g=c;} else if(h<180){g=c;b=x;}
+    else if(h<240){g=x;b=c;} else if(h<300){r=x;b=c;} else {r=c;b=x;}
+    return rgb2hex((r+m)*255,(g+m)*255,(b+m)*255);
+  }
+  function rgb2hsl(r,g,b){
+    r/=255;g/=255;b/=255;
+    var mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn, h=0, l=(mx+mn)/2;
+    var s = d===0 ? 0 : d/(1-Math.abs(2*l-1));
+    if(d!==0){
+      if(mx===r){ h=60*(((g-b)/d)%6); }
+      else if(mx===g){ h=60*((b-r)/d+2); }
+      else { h=60*((r-g)/d+4); }
+    }
+    return [((h%360)+360)%360, s*100, l*100];
+  }
+  function lum(hex){
+    return hex2rgb(hex).map(function(v){
+      v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4);
+    }).reduce(function(a,v,i){ return a + [0.2126,0.7152,0.0722][i]*v; },0);
+  }
+  function ratio(a,b){
+    var l1=lum(a), l2=lum(b), hi=Math.max(l1,l2), lo=Math.min(l1,l2);
+    return (hi+0.05)/(lo+0.05);
+  }
+
+  /* ---------- construction du CSS ---------- */
+  function sorted(){
+    return S.stops.slice().sort(function(a,b){ return a.p-b.p; });
+  }
+  function stopList(){
+    return sorted().map(function(s){ return s.c.toLowerCase()+" "+round1(s.p)+"%"; }).join(", ");
+  }
+  function gradient(angleExpr){
+    var st = stopList();
+    if(S.type==="linear"){ return "linear-gradient("+angleExpr+", "+st+")"; }
+    if(S.type==="radial"){ return "radial-gradient("+S.shape+" farthest-corner at "+S.px+"% "+S.py+"%, "+st+")"; }
+    return "conic-gradient(from "+angleExpr+" at "+S.px+"% "+S.py+"%, "+st+")";
+  }
+  function usesAngle(){ return S.type==="linear" || S.type==="conic"; }
+  function rotates(){ return S.anim==="rotation" && usesAngle(); }
+
+  function keyframes(){
+    var a = S.angle;
+    switch(S.anim){
+      case "rotation":  return usesAngle()
+        ? "@keyframes prisme-rotation {\n  from { --pg-angle: "+a+"deg; }\n  to   { --pg-angle: "+(a+360)+"deg; }\n}"
+        : "";
+      case "flux":      return "@keyframes prisme-flux {\n  from { background-position: 0% 50%; }\n  to   { background-position: 100% 50%; }\n}";
+      case "pulsation": return "@keyframes prisme-pulsation {\n  from { background-size: 120% 120%; }\n  to   { background-size: 260% 260%; }\n}";
+      case "spectre":   return "@keyframes prisme-spectre {\n  from { filter: hue-rotate(0deg); }\n  to   { filter: hue-rotate(360deg); }\n}";
+      default:          return "";
+    }
+  }
+  function animName(){
+    if(S.anim==="none"){ return ""; }
+    if(S.anim==="rotation" && !usesAngle()){ return ""; }
+    return "prisme-"+S.anim;
+  }
+  function bgSize(){
+    if(S.anim==="flux"){ return "300% 300%"; }
+    if(S.anim==="pulsation"){ return "120% 120%"; }
+    return "100% 100%";
+  }
+
+  function rules(sel){
+    var name = animName();
+    var lines = [];
+    lines.push("  background-image: "+gradient(rotates() ? "var(--pg-angle)" : S.angle+"deg")+";");
+    lines.push("  background-size: "+bgSize()+";");
+    lines.push("  background-position: 50% 50%;");
+    if(rotates()){ lines.push("  --pg-angle: "+S.angle+"deg;"); }
+    if(name){
+      lines.push("  animation: "+name+" "+round1(S.dur)+"s "+S.ease+" infinite"+(S.alt?" alternate":"")+";");
+    }
+    var css = sel+" {\n"+lines.join("\n")+"\n}";
+    var kf = keyframes();
+    if(kf){ css += "\n\n"+kf; }
+    if(name){
+      css += "\n\n@media (prefers-reduced-motion: reduce) {\n  "+sel+" { animation: none; }\n}";
+    }
+    return css;
+  }
+
+  function exportCss(){
+    var head = rotates()
+      ? "@property --pg-angle {\n  syntax: \"<angle>\";\n  inherits: false;\n  initial-value: "+S.angle+"deg;\n}\n\n"
+      : "";
+    return head + rules(".degrade");
+  }
+
+  /* ---------- rendu ---------- */
+  var live = $("live"), paint = $("paint");
+
+  function paintCss(){
+    // @property est déclaré dans la feuille principale : on ne réécrit que les règles.
+    live.textContent = rules("#paint");
+  }
+
+  function renderTrack(){
+    var track = $("track");
+    track.style.background = "linear-gradient(90deg, "+stopList()+")";
+    track.innerHTML = "";
+    S.stops.forEach(function(s,i){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "thumb";
+      b.style.left = s.p+"%";
+      b.style.color = s.c;
+      b.setAttribute("role","slider");
+      b.setAttribute("aria-label","Arrêt "+(i+1)+" — "+s.c);
+      b.setAttribute("aria-valuemin","0");
+      b.setAttribute("aria-valuemax","100");
+      b.setAttribute("aria-valuenow", String(Math.round(s.p)));
+      b.setAttribute("aria-valuetext", Math.round(s.p)+" pour cent");
+      b.setAttribute("aria-selected", i===S.sel ? "true" : "false");
+      b.dataset.i = i;
+      track.appendChild(b);
+    });
+  }
+
+  function renderStops(){
+    var box = $("stops");
+    box.innerHTML = "";
+    S.stops.forEach(function(s,i){
+      var row = document.createElement("div");
+      row.className = "stop-row";
+
+      var col = document.createElement("input");
+      col.type = "color"; col.value = s.c;
+      col.setAttribute("aria-label","Couleur de l'arrêt "+(i+1));
+      col.addEventListener("input", function(){ S.stops[i].c = col.value.toUpperCase(); S.sel = i; render(); });
+
+      var hex = document.createElement("input");
+      hex.type = "text"; hex.className = "hex"; hex.value = s.c;
+      hex.setAttribute("aria-label","Code hexadécimal de l'arrêt "+(i+1));
+      hex.addEventListener("change", function(){
+        if(isHex(hex.value)){ S.stops[i].c = normHex(hex.value); render(); }
+        else { hex.value = S.stops[i].c; toast("Code couleur invalide — utilisez #A1B2C3"); }
+      });
+
+      var pos = document.createElement("input");
+      pos.type = "number"; pos.className = "pos"; pos.min = 0; pos.max = 100; pos.step = 1;
+      pos.value = Math.round(s.p);
+      pos.setAttribute("aria-label","Position de l'arrêt "+(i+1)+" en pourcentage");
+      pos.addEventListener("input", function(){
+        S.stops[i].p = clamp(parseFloat(pos.value)||0,0,100); S.sel = i; render();
+      });
+
+      var del = document.createElement("button");
+      del.type = "button"; del.className = "btn btn-icon"; del.textContent = "×";
+      del.setAttribute("aria-label","Supprimer l'arrêt "+(i+1));
+      del.disabled = S.stops.length <= 2;
+      del.addEventListener("click", function(){
+        if(S.stops.length<=2){ return; }
+        S.stops.splice(i,1); S.sel = 0; render();
+      });
+
+      row.append(col,hex,pos,del);
+      box.appendChild(row);
+    });
+    $("stopcount").textContent = S.stops.length+" arrêt"+(S.stops.length>1?"s":"");
+    $("add").disabled = S.stops.length >= 6;
+  }
+
+  function badge(el,r){
+    el.classList.remove("pass","mid","fail");
+    if(r>=4.5){ el.classList.add("pass"); el.textContent = "AA"; }
+    else if(r>=3){ el.classList.add("mid"); el.textContent = "AA grand texte"; }
+    else { el.classList.add("fail"); el.textContent = "insuffisant"; }
+  }
+  function renderContrast(){
+    var rl = Infinity, rd = Infinity;
+    S.stops.forEach(function(s){
+      rl = Math.min(rl, ratio(s.c,"#FFFFFF"));
+      rd = Math.min(rd, ratio(s.c,"#111111"));
+    });
+    $("r-light").textContent = rl.toFixed(2).replace(".",",");
+    $("r-dark").textContent  = rd.toFixed(2).replace(".",",");
+    badge($("b-light"), rl);
+    badge($("b-dark"), rd);
+  }
+
+  function renderAccent(){
+    // L'interface se teinte avec l'arrêt le plus saturé du dégradé.
+    var best = S.stops[0].c, bestS = -1;
+    S.stops.forEach(function(s){
+      var hsl = rgb2hsl.apply(null, hex2rgb(s.c));
+      if(hsl[1] > bestS){ bestS = hsl[1]; best = s.c; }
+    });
+    var h = rgb2hsl.apply(null, hex2rgb(best));
+    var sat = clamp(h[1], 28, 82);
+    var root = document.documentElement.style;
+    root.setProperty("--accent-l", hsl2hex(h[0], sat, clamp(h[2], 22, 40)));
+    root.setProperty("--accent-d", hsl2hex(h[0], sat, clamp(h[2], 62, 80)));
+  }
+
+  function renderControls(){
+    document.querySelectorAll("[data-type]").forEach(function(b){
+      b.setAttribute("aria-pressed", b.dataset.type===S.type ? "true":"false");
+    });
+    document.querySelectorAll("[data-shape]").forEach(function(b){
+      b.setAttribute("aria-pressed", b.dataset.shape===S.shape ? "true":"false");
+    });
+    $("f-angle").hidden = (S.type==="radial");
+    $("f-shape").hidden = (S.type!=="radial");
+    $("f-pos").hidden   = (S.type==="linear");
+    $("anim-opts").hidden = (S.anim==="none");
+    $("anim-note").textContent = NOTES[S.anim];
+    $("v-angle").textContent = S.angle+"°";
+    $("v-px").textContent = S.px+" %";
+    $("v-py").textContent = S.py+" %";
+    $("v-dur").textContent = round1(S.dur).toString().replace(".",",")+" s";
+    $("legib").dataset.on = S.legib ? "1" : "0";
+  }
+
+  function render(){
+    renderAccent();
+    paintCss();
+    renderTrack();
+    renderStops();
+    renderContrast();
+    renderControls();
+    $("css").textContent = exportCss();
+  }
+
+  /* ---------- rail : glisser & clavier ---------- */
+  var track = $("track"), dragging = null;
+
+  function posFromEvent(e){
+    var r = track.getBoundingClientRect();
+    return clamp(((e.clientX - r.left) / r.width) * 100, 0, 100);
+  }
+  track.addEventListener("pointerdown", function(e){
+    var thumb = e.target.closest(".thumb");
+    if(thumb){
+      dragging = parseInt(thumb.dataset.i,10);
+      S.sel = dragging;
+      track.setPointerCapture(e.pointerId); // capture sur le rail : les poignées sont recréées à chaque rendu
+      render();
+      return;
+    }
+    if(S.stops.length >= 6){ toast("Six arrêts au maximum"); return; }
+    var p = posFromEvent(e);
+    S.stops.push({ c: sampleAt(p), p: p });
+    S.sel = S.stops.length-1;
+    render();
+  });
+  track.addEventListener("pointermove", function(e){
+    if(dragging===null){ return; }
+    S.stops[dragging].p = posFromEvent(e);
+    render();
+  });
+  ["pointerup","pointercancel"].forEach(function(ev){
+    track.addEventListener(ev, function(){ dragging = null; });
+  });
+  track.addEventListener("keydown", function(e){
+    var thumb = e.target.closest(".thumb");
+    if(!thumb){ return; }
+    var i = parseInt(thumb.dataset.i,10), step = e.shiftKey ? 10 : 1, moved = true;
+    if(e.key==="ArrowLeft" || e.key==="ArrowDown"){ S.stops[i].p = clamp(S.stops[i].p-step,0,100); }
+    else if(e.key==="ArrowRight" || e.key==="ArrowUp"){ S.stops[i].p = clamp(S.stops[i].p+step,0,100); }
+    else if(e.key==="Home"){ S.stops[i].p = 0; }
+    else if(e.key==="End"){ S.stops[i].p = 100; }
+    else if(e.key==="Delete" || e.key==="Backspace"){
+      if(S.stops.length<=2){ toast("Il faut au moins deux arrêts"); return; }
+      S.stops.splice(i,1); S.sel = 0; e.preventDefault(); render();
+      var first = track.querySelector(".thumb"); if(first){ first.focus(); }
+      return;
+    }
+    else { moved = false; }
+    if(moved){
+      e.preventDefault(); S.sel = i; render();
+      var again = track.querySelector('.thumb[data-i="'+i+'"]');
+      if(again){ again.focus(); }
+    }
+  });
+
+  // Couleur interpolée à la position p, pour qu'un nouvel arrêt s'insère sans casser le dégradé.
+  function sampleAt(p){
+    var st = sorted();
+    if(p <= st[0].p){ return st[0].c; }
+    if(p >= st[st.length-1].p){ return st[st.length-1].c; }
+    for(var i=0;i<st.length-1;i++){
+      if(p >= st[i].p && p <= st[i+1].p){
+        var span = st[i+1].p - st[i].p;
+        var t = span === 0 ? 0 : (p - st[i].p)/span;
+        var a = hex2rgb(st[i].c), b = hex2rgb(st[i+1].c);
+        return rgb2hex(a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t);
+      }
+    }
+    return st[0].c;
+  }
+
+  /* ---------- réglages ---------- */
+  document.querySelectorAll("[data-type]").forEach(function(b){
+    b.addEventListener("click", function(){ S.type = b.dataset.type; render(); });
+  });
+  document.querySelectorAll("[data-shape]").forEach(function(b){
+    b.addEventListener("click", function(){ S.shape = b.dataset.shape; render(); });
+  });
+  $("angle").addEventListener("input", function(e){ S.angle = +e.target.value; render(); });
+  $("px").addEventListener("input", function(e){ S.px = +e.target.value; render(); });
+  $("py").addEventListener("input", function(e){ S.py = +e.target.value; render(); });
+  $("anim").addEventListener("change", function(e){
+    S.anim = e.target.value;
+    if(S.anim==="spectre" || S.anim==="rotation"){
+      // Ces deux mouvements bouclent déjà sur eux-mêmes : régulier et sans retour.
+      S.ease = "linear"; $("ease").value = "linear";
+      S.alt = false; $("alt").checked = false;
+    } else {
+      S.alt = true; $("alt").checked = true;
+    }
+    render();
+  });
+  $("dur").addEventListener("input", function(e){ S.dur = +e.target.value; render(); });
+  $("ease").addEventListener("change", function(e){ S.ease = e.target.value; render(); });
+  $("alt").addEventListener("change", function(e){ S.alt = e.target.checked; render(); });
+  $("legib-on").addEventListener("change", function(e){ S.legib = e.target.checked; render(); });
+
+  $("add").addEventListener("click", function(){
+    if(S.stops.length>=6){ return; }
+    var st = sorted(), gap = 0, at = 50;
+    for(var i=0;i<st.length-1;i++){
+      if(st[i+1].p - st[i].p > gap){ gap = st[i+1].p - st[i].p; at = (st[i].p + st[i+1].p)/2; }
+    }
+    S.stops.push({ c: sampleAt(at), p: at });
+    S.sel = S.stops.length-1;
+    render();
+  });
+
+  $("shuffle").addEventListener("click", function(){
+    var base = Math.floor(Math.random()*360);
+    var schemes = [[0,28,56],[0,140,200],[0,-35,35],[0,180,90]];
+    var sch = schemes[Math.floor(Math.random()*schemes.length)];
+    var n = S.stops.length;
+    var dark = Math.random() < 0.5;
+    S.stops = [];
+    for(var i=0;i<n;i++){
+      var t = n===1 ? 0 : i/(n-1);
+      var h = base + sch[i % sch.length];
+      var l = dark ? 16 + t*62 : 78 - t*58;
+      var s = 40 + Math.random()*45;
+      S.stops.push({ c: hsl2hex(h, s, l), p: Math.round(t*100) });
+    }
+    S.angle = Math.floor(Math.random()*36)*10;
+    S.sel = 0;
+    $("angle").value = S.angle;
+    render();
+  });
+
+  /* ---------- modèles ---------- */
+  var pbox = $("presets");
+  PRESETS.forEach(function(p){
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "preset";
+    var sw = document.createElement("span");
+    sw.className = "swatch";
+    sw.style.background = "linear-gradient(90deg, "+p.s.map(function(s){ return s[0]+" "+s[1]+"%"; }).join(", ")+")";
+    var nm = document.createElement("span");
+    nm.className = "nm"; nm.textContent = p.n;
+    b.append(sw,nm);
+    b.setAttribute("aria-label","Appliquer le modèle "+p.n);
+    b.addEventListener("click", function(){
+      S.type = p.t; S.angle = p.a; S.sel = 0;
+      S.stops = p.s.map(function(s){ return { c:s[0], p:s[1] }; });
+      $("angle").value = p.a;
+      render();
+    });
+    pbox.appendChild(b);
+  });
+
+  /* ---------- copie ---------- */
+  var toastEl = $("toast"), toastTimer;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.dataset.on = "1";
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.dataset.on = "0"; }, 2200);
+  }
+  $("copy").addEventListener("click", function(){
+    var text = exportCss();
+    function fallback(){
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly","");
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch(err){ ok = false; }
+      document.body.removeChild(ta);
+      toast(ok ? "CSS copié dans le presse-papiers" : "Copie impossible — sélectionnez le code puis Ctrl+C");
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){
+        toast("CSS copié dans le presse-papiers");
+      }, fallback);
+    } else { fallback(); }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
