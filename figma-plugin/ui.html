@@ -1,0 +1,601 @@
+<style>
+  :root{
+    --bg: var(--figma-color-bg, #ffffff);
+    --bg-2: var(--figma-color-bg-secondary, #f5f5f5);
+    --text: var(--figma-color-text, #1a1a1a);
+    --text-2: var(--figma-color-text-secondary, #6b7280);
+    --line: var(--figma-color-border, #e0e0e0);
+    --accent: var(--figma-color-bg-brand, #0d99ff);
+    --accent-text: var(--figma-color-text-onbrand, #ffffff);
+    --ok: var(--figma-color-text-success, #0f7b4f);
+    --bad: var(--figma-color-text-danger, #b3261e);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;padding:12px;background:var(--bg);color:var(--text);
+    font:11px/1.45 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  h2{
+    margin:14px 0 6px;font-size:9px;font-weight:600;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--text-2);
+  }
+  h2:first-of-type{margin-top:10px}
+  canvas{
+    width:100%;height:150px;display:block;border-radius:5px;border:1px solid var(--line);
+  }
+  .seg{display:flex;gap:2px;background:var(--bg-2);border-radius:5px;padding:2px}
+  .seg button{
+    flex:1;border:0;background:none;border-radius:4px;padding:5px 2px;cursor:pointer;
+    font:inherit;color:var(--text-2);
+  }
+  .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-text)}
+  .rang{display:flex;align-items:center;gap:5px;margin-bottom:4px}
+  .rang .lbl{width:56px;flex:none;color:var(--text-2)}
+  input[type=color]{
+    width:26px;height:24px;flex:none;padding:0;border:1px solid var(--line);
+    border-radius:4px;background:none;cursor:pointer;
+  }
+  input[type=text],input[type=number],select{
+    width:100%;min-width:0;padding:4px 6px;border:1px solid var(--line);border-radius:4px;
+    background:var(--bg);color:var(--text);font:inherit;
+  }
+  input[type=number]{width:52px;flex:none}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  .sup{width:22px;height:22px;flex:none;padding:0;border:1px solid var(--line);border-radius:4px;
+    background:var(--bg);color:var(--text-2);cursor:pointer;font:inherit}
+  .sup:hover{color:var(--bad)}
+  button.act{
+    width:100%;padding:7px;border-radius:5px;border:1px solid var(--line);
+    background:var(--bg);color:var(--text);font:inherit;cursor:pointer;
+  }
+  button.act:hover{border-color:var(--accent)}
+  button.act[disabled]{opacity:.45;cursor:not-allowed}
+  button.primaire{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+  .duo{display:flex;gap:6px}
+  .duo>*{flex:1}
+  .note{color:var(--text-2);margin:5px 0 0}
+  .etat{margin-top:8px;min-height:14px}
+  .etat.ok{color:var(--ok)} .etat.ko{color:var(--bad)}
+  .mesure{display:flex;gap:10px;margin-top:5px;color:var(--text-2)}
+  .mesure b{color:var(--text);font-variant-numeric:tabular-nums}
+</style>
+
+<canvas id="apercu" width="672" height="360"></canvas>
+
+<h2>Type</h2>
+<div class="seg" id="types">
+  <button data-type="linear" aria-pressed="false">Linéaire</button>
+  <button data-type="radial" aria-pressed="false">Radial</button>
+  <button data-type="conic" aria-pressed="false">Conique</button>
+  <button data-type="mesh" aria-pressed="true">Maille</button>
+</div>
+
+<div id="reg-angle" class="rang" style="margin-top:6px">
+  <span class="lbl">Angle</span>
+  <input type="range" id="angle" min="0" max="360" step="1" value="128">
+  <input type="number" id="angle-n" min="0" max="360" step="1" value="128">
+</div>
+<div id="reg-centre">
+  <div class="rang"><span class="lbl">Centre X</span><input type="range" id="px" min="0" max="100" value="50"><input type="number" id="px-n" min="0" max="100" value="50"></div>
+  <div class="rang"><span class="lbl">Centre Y</span><input type="range" id="py" min="0" max="100" value="50"><input type="number" id="py-n" min="0" max="100" value="50"></div>
+</div>
+<div id="reg-forme" class="rang">
+  <span class="lbl">Foyer</span>
+  <div class="seg" style="flex:1">
+    <button data-shape="circle" aria-pressed="true">Cercle</button>
+    <button data-shape="ellipse" aria-pressed="false">Ellipse</button>
+  </div>
+</div>
+<div id="reg-maille">
+  <div class="rang"><span class="lbl">Douceur</span><input type="range" id="soft" min="35" max="98" value="72"><input type="number" id="soft-n" min="35" max="98" value="72"></div>
+  <div class="rang"><span class="lbl">Fond</span><input type="color" id="base" value="#04191E"><input type="text" id="base-hex" value="#04191E"></div>
+</div>
+
+<h2 id="titre-couleurs">Taches</h2>
+<div id="couleurs"></div>
+<div class="duo" style="margin-top:6px">
+  <button class="act" id="ajouter">Ajouter</button>
+  <button class="act" id="recolorer">Recolorer</button>
+</div>
+
+<h2>Génération</h2>
+<select id="famille"></select>
+<button class="act primaire" id="generer" style="margin-top:6px">Générer un dégradé</button>
+<p class="note" id="sortie">Chaque famille a sa propre structure : nombre d'arrêts, espacement, type et coupes nettes changent de l'une à l'autre.</p>
+<div class="mesure">
+  <span>Contraste — blanc <b id="c-blanc">—</b></span>
+  <span>noir <b id="c-noir">—</b></span>
+</div>
+
+<h2>Poser dans le fichier</h2>
+<div class="rang">
+  <span class="lbl">Taille</span>
+  <input type="number" id="larg" min="1" max="4000" value="1200">
+  <span class="lbl" style="width:8px">×</span>
+  <input type="number" id="haut" min="1" max="4000" value="800">
+</div>
+<div class="duo" style="margin-top:6px">
+  <button class="act primaire" id="creer">Créer un cadre</button>
+  <button class="act" id="appliquer" disabled>Appliquer à la sélection</button>
+</div>
+<p class="etat" id="etat"></p>
+
+<script>
+(function(){
+  "use strict";
+
+  var S = {
+    type:"mesh", angle:128, px:50, py:50, shape:"circle",
+    stops:[{c:"#0B3B6F",p:0},{c:"#1FA8A0",p:52},{c:"#F2E7C9",p:100}],
+    base:"#04191E", soft:72,
+    blobs:[
+      { c:"#F2FFFB", x:6,  y:29, r:22 },
+      { c:"#7CF5D8", x:14, y:35, r:46 },
+      { c:"#18D9A0", x:30, y:48, r:80 },
+      { c:"#0E5C63", x:80, y:82, r:98 }
+    ]
+  };
+  var MAX = 6;
+
+  var $ = function(id){ return document.getElementById(id); };
+  function clamp(v,a,b){ return Math.min(b,Math.max(a,v)); }
+  function rf(a,b){ return Math.random()*(b-a)+a; }
+  function ri(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+  function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function isMesh(){ return S.type==="mesh"; }
+
+  /* ---------- couleur ---------- */
+  function hex2rgb(h){
+    h = String(h).replace("#","");
+    if(h.length===3){ h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2]; }
+    return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  }
+  function rgb2hex(r,g,b){
+    return "#" + [r,g,b].map(function(v){
+      return clamp(Math.round(v),0,255).toString(16).padStart(2,"0");
+    }).join("").toUpperCase();
+  }
+  function isHex(v){ return /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(v).trim()); }
+  function normHex(v){
+    v = String(v).trim(); if(v[0] !== "#"){ v = "#"+v; }
+    if(v.length===4){ v = "#"+v[1]+v[1]+v[2]+v[2]+v[3]+v[3]; }
+    return v.toUpperCase();
+  }
+  // On fond vers la même couleur en alpha 0 : passer par « transparent » virerait au gris.
+  function rgba(hex,a){ var c = hex2rgb(hex); return "rgba("+c[0]+","+c[1]+","+c[2]+","+a+")"; }
+  function hsl2hex(h,s,l){
+    h=((h%360)+360)%360; s=clamp(s,0,100)/100; l=clamp(l,0,100)/100;
+    var c=(1-Math.abs(2*l-1))*s, x=c*(1-Math.abs((h/60)%2-1)), m=l-c/2, r=0,g=0,b=0;
+    if(h<60){r=c;g=x;} else if(h<120){r=x;g=c;} else if(h<180){g=c;b=x;}
+    else if(h<240){g=x;b=c;} else if(h<300){r=x;b=c;} else {r=c;b=x;}
+    return rgb2hex((r+m)*255,(g+m)*255,(b+m)*255);
+  }
+  function lum(hex){
+    return hex2rgb(hex).map(function(v){
+      v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4);
+    }).reduce(function(a,v,i){ return a + [0.2126,0.7152,0.0722][i]*v; },0);
+  }
+  function ratio(a,b){
+    var l1=lum(a), l2=lum(b), hi=Math.max(l1,l2), lo=Math.min(l1,l2);
+    return (hi+0.05)/(lo+0.05);
+  }
+
+  /* ---------- aperçu sur canevas ---------- */
+  function sorted(){ return S.stops.slice().sort(function(a,b){ return a.p-b.p; }); }
+
+  function dessiner(ctx, W, H){
+    var i;
+    if(isMesh()){
+      ctx.fillStyle = S.base; ctx.fillRect(0,0,W,H);
+      // Ordre inverse : la première tache est celle du dessus, donc peinte en dernier.
+      for(i=S.blobs.length-1;i>=0;i--){
+        var b = S.blobs[i];
+        var cx = b.x/100*W, cy = b.y/100*H, rx = b.r/100*W, ry = b.r/100*H;
+        if(rx<=0 || ry<=0){ continue; }
+        var k = ry/rx;
+        ctx.save(); ctx.translate(cx,cy); ctx.scale(1,k);
+        var g = ctx.createRadialGradient(0,0,0,0,0,rx);
+        g.addColorStop(0, b.c);
+        g.addColorStop(clamp(S.soft*0.45/100,0,1), rgba(b.c,.55));
+        g.addColorStop(clamp(S.soft/100,0,1), rgba(b.c,0));
+        ctx.fillStyle = g;
+        ctx.fillRect(-cx-W, (-cy-H)/k, W*3, (H*3)/k);
+        ctx.restore();
+      }
+      return;
+    }
+    var st = sorted();
+    function ajouter(g){ st.forEach(function(s){ g.addColorStop(clamp(s.p/100,0,1), s.c); }); }
+
+    if(S.type==="linear"){
+      var a = S.angle*Math.PI/180, dx = Math.sin(a), dy = -Math.cos(a);
+      var L = Math.abs(W*dx) + Math.abs(H*dy);
+      var g1 = ctx.createLinearGradient(W/2-dx*L/2, H/2-dy*L/2, W/2+dx*L/2, H/2+dy*L/2);
+      ajouter(g1); ctx.fillStyle = g1; ctx.fillRect(0,0,W,H); return;
+    }
+    if(S.type==="radial"){
+      var cx2 = S.px/100*W, cy2 = S.py/100*H;
+      var mx = Math.max(cx2, W-cx2), my = Math.max(cy2, H-cy2);
+      if(S.shape==="circle"){
+        var r = Math.sqrt(mx*mx+my*my);
+        var g2 = ctx.createRadialGradient(cx2,cy2,0,cx2,cy2,r);
+        ajouter(g2); ctx.fillStyle = g2; ctx.fillRect(0,0,W,H);
+      } else {
+        var rx2 = mx*Math.SQRT2, ry2 = my*Math.SQRT2, k2 = ry2/rx2;
+        ctx.save(); ctx.translate(cx2,cy2); ctx.scale(1,k2);
+        var g3 = ctx.createRadialGradient(0,0,0,0,0,rx2);
+        ajouter(g3); ctx.fillStyle = g3;
+        ctx.fillRect(-cx2-W, (-cy2-H)/k2, W*3, (H*3)/k2); ctx.restore();
+      }
+      return;
+    }
+    if(typeof ctx.createConicGradient !== "function"){
+      ctx.fillStyle = st[0].c; ctx.fillRect(0,0,W,H); return;
+    }
+    var g4 = ctx.createConicGradient((S.angle-90)*Math.PI/180, S.px/100*W, S.py/100*H);
+    ajouter(g4); ctx.fillStyle = g4; ctx.fillRect(0,0,W,H);
+  }
+
+  /* ---------- familles ---------- */
+  function espacer(n, courbe, secousse){
+    var out = [];
+    for(var i=0;i<n;i++){
+      var t = n===1 ? 0 : i/(n-1);
+      var p = 100*Math.pow(t, courbe===undefined ? 1 : courbe);
+      if(secousse && i>0 && i<n-1){ p += rf(-secousse, secousse); }
+      out.push(clamp(p,0,100));
+    }
+    return out.sort(function(a,b){ return a-b; });
+  }
+  function assembler(cs, ps){ return cs.map(function(c,i){ return { c:c, p:ps[i] }; }); }
+  function bandes(cs){
+    var k = cs.length, coupes = [], i;
+    for(i=1;i<k;i++){ coupes.push(rf(18,82)); }
+    coupes.sort(function(a,b){ return a-b; });
+    var bords = [0].concat(coupes,[100]), out = [];
+    for(i=0;i<k;i++){ out.push({c:cs[i],p:bords[i]}); out.push({c:cs[i],p:bords[i+1]}); }
+    return out;
+  }
+  function angleLibre(){ return ri(0,35)*10; }
+  function angleNet(){ return pick([0,45,90,135,180,225,270,315]); }
+  function taches(cs, rs){
+    return cs.map(function(c,i){ return { c:c, x:ri(4,96), y:ri(4,96), r:rs[i] }; });
+  }
+
+  var FAMILLES = [
+    { id:"maille-profonde", n:"Maille profonde", d:"fond nocturne, taches lumineuses", f:function(){
+        var h = ri(0,359), n = ri(3,4), cs = [], rs = [], i;
+        for(i=0;i<n;i++){
+          var t = i/(n-1);
+          cs.push(hsl2hex(h + rf(-40,40)*t, lerp(rf(30,55), rf(75,100), 1-t), lerp(rf(88,97), rf(38,55), t)));
+          rs.push(Math.round(lerp(rf(16,28), rf(78,105), t)));
+        }
+        return { type:"mesh", base:hsl2hex(h+rf(-25,25), rf(35,70), rf(4,11)), soft:ri(62,85), blobs:taches(cs,rs) };
+      }},
+    { id:"maille-claire", n:"Maille claire", d:"fond pâle, taches pastel", f:function(){
+        var h = ri(0,359), n = ri(3,4), cs = [], rs = [], i;
+        for(i=0;i<n;i++){ cs.push(hsl2hex(h + i*rf(35,80), rf(45,80), rf(62,80))); rs.push(ri(45,95)); }
+        return { type:"mesh", base:hsl2hex(h+rf(-20,20), rf(18,40), rf(88,96)), soft:ri(66,92), blobs:taches(cs,rs) };
+      }},
+    { id:"duo", n:"Duo franc", d:"deux couleurs opposées", f:function(){
+        var h = ri(0,359), h2 = h + pick([150,180,210]), sombre = Math.random()<0.5;
+        return { type:"linear", angle:angleLibre(), stops:[
+          { c:hsl2hex(h,  rf(52,88), sombre ? rf(12,26) : rf(64,80)), p:rf(0,10) },
+          { c:hsl2hex(h2, rf(52,88), sombre ? rf(64,80) : rf(12,26)), p:rf(90,100) }
+        ]};
+      }},
+    { id:"analogue", n:"Analogue", d:"teintes voisines", f:function(){
+        var n = ri(3,4), base = ri(0,359), sens = pick([-1,1]), pas = rf(14,32);
+        var l0 = rf(18,36), l1 = rf(62,86), sat = rf(42,78), cs = [];
+        for(var i=0;i<n;i++){ cs.push(hsl2hex(base + sens*i*pas, sat + rf(-10,10), lerp(l0,l1,i/(n-1)))); }
+        return { type:pick(["linear","linear","radial"]), angle:angleLibre(), px:ri(30,70), py:ri(30,70),
+                 shape:pick(["circle","ellipse"]), stops:assembler(cs, espacer(n, rf(0.7,1.4), 8)) };
+      }},
+    { id:"triade", n:"Triade", d:"trois teintes à 120°", f:function(){
+        var base = ri(0,359), sat = rf(58,90), cs = [], ls = [rf(26,40), rf(46,62), rf(66,82)];
+        for(var i=0;i<3;i++){ cs.push(hsl2hex(base + i*120 + rf(-12,12), sat + rf(-8,8), ls[i])); }
+        return { type:pick(["linear","conic"]), angle:angleLibre(), px:ri(25,75), py:ri(25,75),
+                 stops:assembler(cs, espacer(3, rf(0.75,1.3), 10)) };
+      }},
+    { id:"mono", n:"Monochrome", d:"une teinte, rampe de clarté", f:function(){
+        var h = ri(0,359), n = ri(3,5), s0 = rf(35,72), cs = [];
+        for(var i=0;i<n;i++){
+          var t = i/(n-1);
+          cs.push(hsl2hex(h + rf(-6,6), lerp(s0, s0*0.45, t), lerp(rf(8,20), rf(80,94), t)));
+        }
+        return { type:pick(["linear","radial"]), angle:angleLibre(), px:ri(20,80), py:ri(20,80),
+                 shape:pick(["circle","ellipse"]), stops:assembler(cs, espacer(n, rf(0.6,1.6), 6)) };
+      }},
+    { id:"crepuscule", n:"Crépuscule", d:"balayage chaud", f:function(){
+        var depart = rf(325,352), arrivee = rf(35,58)+360, n = ri(4,5), cs = [];
+        for(var i=0;i<n;i++){
+          var t = i/(n-1);
+          cs.push(hsl2hex(lerp(depart,arrivee,t), rf(62,94), lerp(rf(18,30), rf(70,86), t)));
+        }
+        return { type:"linear", angle:pick([0,15,165,180,195,345]), stops:assembler(cs, espacer(n, rf(0.55,0.85), 5)) };
+      }},
+    { id:"spectre", n:"Spectre", d:"cercle chromatique complet", f:function(){
+        var n = ri(5,6), base = ri(0,359), sat = rf(64,92), l = rf(44,64), cs = [], i;
+        for(i=0;i<n-1;i++){ cs.push(hsl2hex(base + i*(360/(n-1)), sat, l + rf(-6,6))); }
+        cs.push(cs[0]);
+        return { type:"conic", angle:angleLibre(), px:ri(35,65), py:ri(35,65), stops:assembler(cs, espacer(n)) };
+      }},
+    { id:"bandes", n:"Bandes nettes", d:"coupes franches", f:function(){
+        var k = ri(2,3), base = ri(0,359), ecart = pick([30,60,120,180]), cs = [];
+        for(var i=0;i<k;i++){ cs.push(hsl2hex(base + i*ecart, rf(45,88), rf(30,72))); }
+        var conique = Math.random() < 0.4;
+        return { type: conique ? "conic" : "linear", angle: conique ? angleLibre() : angleNet(),
+                 px:ri(35,65), py:ri(35,65), stops:bandes(cs) };
+      }},
+    { id:"halo", n:"Halo", d:"foyer lumineux décentré", f:function(){
+        var h = ri(0,359), decale = Math.random()<0.7;
+        return { type:"radial", shape:pick(["circle","ellipse"]),
+                 px: decale ? ri(15,85) : 50, py: decale ? ri(15,85) : 50,
+                 stops:[
+                   { c:hsl2hex(h, rf(40,85), rf(72,92)), p:0 },
+                   { c:hsl2hex(h+rf(-25,25), rf(55,90), rf(40,58)), p:rf(18,42) },
+                   { c:hsl2hex(h+rf(-40,40), rf(35,70), rf(6,18)), p:100 }
+                 ]};
+      }},
+    { id:"pastel", n:"Pastel givré", d:"clair, peu saturé", f:function(){
+        var n = ri(3,4), base = ri(0,359), etendue = rf(25,70), cs = [];
+        for(var i=0;i<n;i++){ cs.push(hsl2hex(base + (i/(n-1))*etendue, rf(16,42), rf(80,93))); }
+        return { type:pick(["linear","radial"]), angle:angleLibre(), px:ri(25,75), py:ri(25,75),
+                 shape:pick(["circle","ellipse"]), stops:assembler(cs, espacer(n, 1, 12)) };
+      }},
+    { id:"neon", n:"Nocturne néon", d:"base sombre, éclats saturés", f:function(){
+        var fond = hsl2hex(ri(215,285), rf(30,60), rf(5,12));
+        var st = [{ c:fond, p:0 },
+                  { c:hsl2hex(ri(275,340), rf(85,100), rf(50,62)), p:rf(30,52) },
+                  { c:hsl2hex(ri(155,205), rf(85,100), rf(48,62)), p:rf(70,88) }];
+        if(Math.random()<0.5){ st.push({ c:fond, p:100 }); } else { st[st.length-1].p = 100; }
+        return { type:pick(["linear","radial","conic"]), angle:angleLibre(), px:ri(20,80), py:ri(20,80),
+                 shape:pick(["circle","ellipse"]), stops:st };
+      }},
+    { id:"terre", n:"Terre cuite", d:"ocres et bruns", f:function(){
+        var n = ri(3,4), base = rf(16,46), cs = [];
+        for(var i=0;i<n;i++){
+          var t = i/(n-1);
+          cs.push(hsl2hex(base + rf(-14,14), lerp(rf(48,62), rf(20,32), t), lerp(rf(20,32), rf(74,90), t)));
+        }
+        return { type:pick(["linear","linear","radial"]), angle:angleLibre(), px:ri(30,70), py:ri(30,70),
+                 shape:"ellipse", stops:assembler(cs, espacer(n, rf(0.8,1.3), 9)) };
+      }}
+  ];
+
+  /* ---------- rendu de l'interface ---------- */
+  function rendreCouleurs(){
+    var box = $("couleurs");
+    box.innerHTML = "";
+    var liste = isMesh() ? S.blobs : S.stops;
+    $("titre-couleurs").textContent = isMesh() ? "Taches" : "Couleurs";
+
+    liste.forEach(function(o,i){
+      var rang = document.createElement("div");
+      rang.className = "rang";
+
+      var col = document.createElement("input");
+      col.type = "color"; col.value = o.c;
+      col.title = "Couleur";
+      col.addEventListener("input", function(){ o.c = col.value.toUpperCase(); rendre(); });
+
+      var hex = document.createElement("input");
+      hex.type = "text"; hex.value = o.c;
+      hex.addEventListener("change", function(){
+        if(isHex(hex.value)){ o.c = normHex(hex.value); rendre(); } else { hex.value = o.c; }
+      });
+
+      var num = document.createElement("input");
+      num.type = "number"; num.min = 0;
+      if(isMesh()){
+        num.max = 160; num.value = Math.round(o.r); num.title = "Taille";
+        num.addEventListener("input", function(){ o.r = clamp(parseFloat(num.value)||5,5,160); rendre(); });
+      } else {
+        num.max = 100; num.value = Math.round(o.p); num.title = "Position";
+        num.addEventListener("input", function(){ o.p = clamp(parseFloat(num.value)||0,0,100); rendre(); });
+      }
+
+      var sup = document.createElement("button");
+      sup.className = "sup"; sup.textContent = "×"; sup.title = "Supprimer";
+      sup.disabled = liste.length <= (isMesh() ? 1 : 2);
+      sup.addEventListener("click", function(){
+        if(liste.length <= (isMesh() ? 1 : 2)){ return; }
+        liste.splice(i,1); rendre();
+      });
+
+      rang.append(col, hex, num, sup);
+      box.appendChild(rang);
+    });
+
+    if(isMesh()){
+      // Une tache se place en X/Y : ces champs complètent la couleur et la taille.
+      S.blobs.forEach(function(b,i){
+        var rang = document.createElement("div");
+        rang.className = "rang";
+        var lbl = document.createElement("span");
+        lbl.className = "lbl"; lbl.textContent = "Tache " + (i+1);
+        var x = document.createElement("input");
+        x.type = "number"; x.min = 0; x.max = 100; x.value = Math.round(b.x); x.title = "X";
+        x.addEventListener("input", function(){ b.x = clamp(parseFloat(x.value)||0,0,100); rendre(); });
+        var y = document.createElement("input");
+        y.type = "number"; y.min = 0; y.max = 100; y.value = Math.round(b.y); y.title = "Y";
+        y.addEventListener("input", function(){ b.y = clamp(parseFloat(y.value)||0,0,100); rendre(); });
+        rang.append(lbl, x, y);
+        box.appendChild(rang);
+      });
+    }
+
+    $("ajouter").disabled = liste.length >= MAX;
+  }
+
+  function rendreContraste(){
+    var cs = isMesh() ? [S.base].concat(S.blobs.map(function(b){ return b.c; }))
+                      : S.stops.map(function(s){ return s.c; });
+    var rl = Infinity, rd = Infinity;
+    cs.forEach(function(c){ rl = Math.min(rl, ratio(c,"#FFFFFF")); rd = Math.min(rd, ratio(c,"#111111")); });
+    $("c-blanc").textContent = rl.toFixed(2).replace(".",",");
+    $("c-noir").textContent  = rd.toFixed(2).replace(".",",");
+  }
+
+  function rendre(){
+    document.querySelectorAll("[data-type]").forEach(function(b){
+      b.setAttribute("aria-pressed", b.dataset.type===S.type ? "true":"false");
+    });
+    document.querySelectorAll("[data-shape]").forEach(function(b){
+      b.setAttribute("aria-pressed", b.dataset.shape===S.shape ? "true":"false");
+    });
+    $("reg-angle").style.display  = (S.type==="linear" || S.type==="conic") ? "" : "none";
+    $("reg-centre").style.display = (S.type==="radial" || S.type==="conic") ? "" : "none";
+    $("reg-forme").style.display  = (S.type==="radial") ? "" : "none";
+    $("reg-maille").style.display = isMesh() ? "" : "none";
+
+    $("angle").value = S.angle; $("angle-n").value = S.angle;
+    $("px").value = S.px; $("px-n").value = S.px;
+    $("py").value = S.py; $("py-n").value = S.py;
+    $("soft").value = S.soft; $("soft-n").value = S.soft;
+    $("base").value = S.base; $("base-hex").value = S.base;
+
+    var cv = $("apercu");
+    dessiner(cv.getContext("2d"), cv.width, cv.height);
+
+    rendreCouleurs();
+    rendreContraste();
+  }
+
+  /* ---------- réglages ---------- */
+  document.querySelectorAll("[data-type]").forEach(function(b){
+    b.addEventListener("click", function(){ S.type = b.dataset.type; rendre(); });
+  });
+  document.querySelectorAll("[data-shape]").forEach(function(b){
+    b.addEventListener("click", function(){ S.shape = b.dataset.shape; rendre(); });
+  });
+  function relier(idRange, idNum, cle, min, max){
+    function poser(v){ S[cle] = clamp(Math.round(v), min, max); rendre(); }
+    $(idRange).addEventListener("input", function(e){ poser(+e.target.value); });
+    $(idNum).addEventListener("input", function(e){ poser(+e.target.value || 0); });
+  }
+  relier("angle","angle-n","angle",0,360);
+  relier("px","px-n","px",0,100);
+  relier("py","py-n","py",0,100);
+  relier("soft","soft-n","soft",35,98);
+  $("base").addEventListener("input", function(e){ S.base = e.target.value.toUpperCase(); rendre(); });
+  $("base-hex").addEventListener("change", function(e){
+    if(isHex(e.target.value)){ S.base = normHex(e.target.value); rendre(); } else { e.target.value = S.base; }
+  });
+
+  $("ajouter").addEventListener("click", function(){
+    if(isMesh()){
+      if(S.blobs.length>=MAX){ return; }
+      S.blobs.unshift({ c:hsl2hex(ri(0,359), rf(55,90), rf(50,75)), x:ri(20,80), y:ri(20,80), r:ri(35,80) });
+    } else {
+      if(S.stops.length>=MAX){ return; }
+      var st = sorted(), ecart = 0, at = 50;
+      for(var i=0;i<st.length-1;i++){
+        if(st[i+1].p - st[i].p > ecart){ ecart = st[i+1].p - st[i].p; at = (st[i].p + st[i+1].p)/2; }
+      }
+      S.stops.push({ c:hsl2hex(ri(0,359), rf(40,80), rf(35,70)), p:at });
+    }
+    rendre();
+  });
+
+  $("recolorer").addEventListener("click", function(){
+    var base = ri(0,359);
+    var accord = pick([[0,28,56,84],[0,150,180,210],[0,-35,35,70],[0,180,90,270]]);
+    var sombre = Math.random()<0.5;
+    if(isMesh()){
+      S.base = hsl2hex(base+rf(-20,20), rf(25,60), sombre ? rf(5,12) : rf(88,95));
+      S.blobs.forEach(function(b,i){ b.c = hsl2hex(base + accord[i%accord.length], rf(55,95), sombre ? rf(48,88) : rf(55,75)); });
+    } else {
+      var n = S.stops.length;
+      S.stops.forEach(function(s,i){
+        var t = n===1 ? 0 : i/(n-1);
+        s.c = hsl2hex(base + accord[i%accord.length], rf(38,86), sombre ? lerp(16,78,t) : lerp(80,20,t));
+      });
+    }
+    $("sortie").textContent = "Recoloré — disposition conservée.";
+    rendre();
+  });
+
+  /* ---------- générateur ---------- */
+  var sel = $("famille");
+  var auto = document.createElement("option");
+  auto.value = "auto"; auto.textContent = "Au hasard — toutes les familles";
+  sel.appendChild(auto);
+  FAMILLES.forEach(function(f){
+    var o = document.createElement("option");
+    o.value = f.id; o.textContent = f.n + " — " + f.d;
+    sel.appendChild(o);
+  });
+
+  var derniere = null;
+  $("generer").addEventListener("click", function(){
+    var fam;
+    if(sel.value === "auto"){
+      var pool = FAMILLES.filter(function(f){ return f.id !== derniere; });
+      fam = pick(pool.length ? pool : FAMILLES);
+    } else {
+      fam = FAMILLES.filter(function(f){ return f.id === sel.value; })[0] || FAMILLES[0];
+    }
+    derniere = fam.id;
+
+    var r = fam.f();
+    S.type = r.type;
+    if(r.angle !== undefined){ S.angle = r.angle; }
+    S.px = r.px === undefined ? 50 : r.px;
+    S.py = r.py === undefined ? 50 : r.py;
+    if(r.shape){ S.shape = r.shape; }
+    if(r.base){ S.base = r.base; }
+    if(r.soft){ S.soft = r.soft; }
+    if(r.blobs){
+      S.blobs = r.blobs.slice(0,MAX).map(function(b){
+        return { c:b.c, x:clamp(Math.round(b.x),0,100), y:clamp(Math.round(b.y),0,100), r:clamp(Math.round(b.r),5,160) };
+      });
+    }
+    if(r.stops){
+      S.stops = r.stops.slice(0,MAX).map(function(s){ return { c:s.c, p:clamp(Math.round(s.p*10)/10,0,100) }; });
+    }
+    var NOMS = { linear:"linéaire", radial:"radial", conic:"conique", mesh:"maille" };
+    var nb = S.type==="mesh" ? S.blobs.length + " taches" : S.stops.length + " arrêts";
+    $("sortie").textContent = fam.n + " — " + nb + " · " + NOMS[S.type];
+    rendre();
+  });
+
+  /* ---------- envoi vers Figma ---------- */
+  function etatEnvoye(){
+    return {
+      type:S.type, angle:S.angle, px:S.px, py:S.py, shape:S.shape,
+      stops:S.stops, base:S.base, soft:S.soft, blobs:S.blobs
+    };
+  }
+  function dire(msg, ok){
+    var e = $("etat");
+    e.textContent = msg;
+    e.className = "etat " + (ok ? "ok" : "ko");
+  }
+  $("creer").addEventListener("click", function(){
+    parent.postMessage({ pluginMessage:{
+      type:"creer", etat:etatEnvoye(),
+      largeur: clamp(parseInt($("larg").value,10)||1200, 1, 4000),
+      hauteur: clamp(parseInt($("haut").value,10)||800, 1, 4000)
+    }}, "*");
+  });
+  $("appliquer").addEventListener("click", function(){
+    parent.postMessage({ pluginMessage:{ type:"appliquer", etat:etatEnvoye() } }, "*");
+  });
+
+  window.onmessage = function(e){
+    var m = e.data && e.data.pluginMessage;
+    if(!m){ return; }
+    if(m.type === "retour"){ dire(m.message, m.ok); }
+    if(m.type === "selection"){
+      $("appliquer").disabled = m.nombre === 0;
+      $("appliquer").textContent = m.nombre > 1
+        ? "Appliquer aux " + m.nombre + " calques"
+        : "Appliquer à la sélection";
+    }
+  };
+
+  rendre();
+})();
+</script>
