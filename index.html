@@ -505,7 +505,9 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
           <button class="btn" id="dl-png" type="button">Image PNG</button>
           <button class="btn" id="dl-css" type="button">Fichier CSS</button>
         </div>
-        <p class="hint" style="margin-top:.55rem">L'image est une capture fixe : une animation est figée sur sa première image.</p>
+        <button class="btn btn-primary" id="dl-video" type="button">Vidéo en boucle</button>
+        <p class="hint" id="dl-note" style="margin-top:.55rem"></p>
+        <p class="hint" style="margin-top:.35rem">Le PNG est une capture fixe, figée sur la première image de l'animation.</p>
       </section>
 
       <section class="card panel" aria-labelledby="t-mem">
@@ -709,6 +711,8 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
       lines.push("  background-repeat: no-repeat;");
       lines.push("  background-size: "+bgSize()+";");
       if(S.anim==="flux"){ lines.push("  background-position: "+posDepart()+";"); }
+      // Sans cela une maille en pulsation grossirait depuis le coin haut-gauche.
+      if(S.anim==="pulsation"){ lines.push("  background-position: 50% 50%;"); }
     } else {
       lines.push("  background-image: "+gradient(rotates() ? "var(--pg-angle)" : S.angle+"deg")+";");
       lines.push("  background-size: "+bgSize()+";");
@@ -955,6 +959,7 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     renderContrast();
     renderControls();
     $("css").textContent = exportCss();
+    renderExport();
     memoriser();
   }
 
@@ -1461,26 +1466,89 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
   });
 
   /* =========================================================
-     dessin sur canevas (pour le PNG)
+     dessin sur canevas (image fixe et vidéo)
      ========================================================= */
-  function dessiner(ctx, W, H){
-    var i;
+  // Courbes d'accélération : la vidéo doit suivre exactement le rythme du CSS.
+  var COURBES = {
+    "linear":[0,0,1,1],
+    "ease":[.25,.1,.25,1],
+    "ease-in-out":[.42,0,.58,1],
+    "cubic-bezier(.65,0,.35,1)":[.65,0,.35,1]
+  };
+  function bezier(nom, x){
+    var c = COURBES[nom] || COURBES["ease-in-out"];
+    var x1=c[0], y1=c[1], x2=c[2], y2=c[3];
+    if(x1===0 && y1===0 && x2===1 && y2===1){ return x; }
+    var t = x, i, fx, dx, u;
+    for(i=0;i<8;i++){
+      u = 1-t;
+      fx = 3*u*u*t*x1 + 3*u*t*t*x2 + t*t*t - x;
+      dx = 3*u*u*x1 + 6*u*t*(x2-x1) + 3*t*t*(1-x2);
+      if(Math.abs(dx) < 1e-6){ break; }
+      t = clamp(t - fx/dx, 0, 1);
+    }
+    u = 1-t;
+    return 3*u*u*t*y1 + 3*u*t*t*y2 + t*t*t;
+  }
+  // Position dans le cycle : avec l'aller-retour, la seconde moitié rejoue à l'envers.
+  function phase(p){
+    p = clamp(p,0,1);
+    if(!S.alt){ return bezier(S.ease, p); }
+    var q = p*2, it = Math.min(Math.floor(q),1), l = q - Math.floor(q);
+    if(q >= 2){ it = 1; l = 1; }
+    return it===0 ? bezier(S.ease,l) : 1 - bezier(S.ease,l);
+  }
+  function cycleSecondes(){ return S.alt ? S.dur*2 : S.dur; }
+
+  // Matrice hue-rotate du CSS appliquée aux couleurs : un dégradé s'interpole
+  // linéairement, donc teinter les arrêts revient à teinter le rendu.
+  function tourner(hex, deg){
+    if(!deg){ return hex; }
+    var a = deg*Math.PI/180, co = Math.cos(a), si = Math.sin(a), c = hex2rgb(hex);
+    var r = c[0], g = c[1], b = c[2];
+    return rgb2hex(
+      (0.213+co*0.787-si*0.213)*r + (0.715-co*0.715-si*0.715)*g + (0.072-co*0.072+si*0.928)*b,
+      (0.213-co*0.213+si*0.143)*r + (0.715+co*0.285+si*0.140)*g + (0.072-co*0.072-si*0.283)*b,
+      (0.213-co*0.213-si*0.787)*r + (0.715-co*0.715+si*0.715)*g + (0.072+co*0.928+si*0.072)*b
+    );
+  }
+
+  // Boîte du dégradé en pixels : background-size et background-position à l'instant v.
+  function boite(v, W, H){
+    if(S.anim==="flux" && !isMesh()){
+      return { x:-(3*W-W)*v, y:-(3*H-H)*0.5, w:3*W, h:3*H };
+    }
+    if(S.anim==="pulsation"){
+      var s = isMesh() ? lerp(1,1.45,v) : lerp(1.2,2.6,v);
+      return { x:(W-W*s)/2, y:(H-H*s)/2, w:W*s, h:H*s };
+    }
+    return { x:0, y:0, w:W, h:H };
+  }
+
+  function dessiner(ctx, W, H, v){
+    v = v || 0;
+    var b = boite(v, W, H), i;
+    var hr = S.anim==="spectre" ? 360*v : 0;
+    var ang = (S.anim==="rotation" && usesAngle()) ? S.angle + 360*v : S.angle;
+
     if(isMesh()){
-      ctx.fillStyle = S.base;
+      ctx.fillStyle = tourner(S.base, hr);
       ctx.fillRect(0,0,W,H);
       // Ordre inverse : le premier calque CSS est celui du dessus, donc peint en dernier.
       for(i=S.blobs.length-1;i>=0;i--){
-        var b = S.blobs[i];
-        var cx = b.x/100*W, cy = b.y/100*H, rx = b.r/100*W, ry = b.r/100*H;
+        var bl = S.blobs[i], c = tourner(bl.c, hr);
+        var cx = b.x + bl.x/100*b.w, cy = b.y + bl.y/100*b.h;
+        var rx = bl.r/100*b.w, ry = bl.r/100*b.h;
+        if(S.anim==="flux"){ var dv = derive(i); cx += dv[0]*v; cy += dv[1]*v; }
         if(rx<=0 || ry<=0){ continue; }
         var k = ry/rx;
         ctx.save();
         ctx.translate(cx,cy);
         ctx.scale(1, k);
         var g = ctx.createRadialGradient(0,0,0,0,0,rx);
-        g.addColorStop(0, b.c);
-        g.addColorStop(clamp(S.soft*0.45/100,0,1), rgba(b.c,.55));
-        g.addColorStop(clamp(S.soft/100,0,1), rgba(b.c,0));
+        g.addColorStop(0, c);
+        g.addColorStop(clamp(S.soft*0.45/100,0,1), rgba(c,.55));
+        g.addColorStop(clamp(S.soft/100,0,1), rgba(c,0));
         ctx.fillStyle = g;
         // Rectangle exprimé dans l'espace déjà translaté et mis à l'échelle.
         ctx.fillRect(-cx-W, (-cy-H)/k, W*3, (H*3)/k);
@@ -1491,38 +1559,38 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
 
     var st = sorted();
     function ajouter(g){
-      st.forEach(function(s){ g.addColorStop(clamp(s.p/100,0,1), s.c); });
+      st.forEach(function(s){ g.addColorStop(clamp(s.p/100,0,1), tourner(s.c, hr)); });
     }
+    var cx0 = b.x + S.px/100*b.w, cy0 = b.y + S.py/100*b.h;
 
     if(S.type==="linear"){
-      var a = S.angle*Math.PI/180;
-      var dx = Math.sin(a), dy = -Math.cos(a);
-      var L = Math.abs(W*dx) + Math.abs(H*dy);
-      var g1 = ctx.createLinearGradient(W/2-dx*L/2, H/2-dy*L/2, W/2+dx*L/2, H/2+dy*L/2);
+      var a = ang*Math.PI/180, dx = Math.sin(a), dy = -Math.cos(a);
+      var L = Math.abs(b.w*dx) + Math.abs(b.h*dy);
+      var mx0 = b.x + b.w/2, my0 = b.y + b.h/2;
+      var g1 = ctx.createLinearGradient(mx0-dx*L/2, my0-dy*L/2, mx0+dx*L/2, my0+dy*L/2);
       ajouter(g1); ctx.fillStyle = g1; ctx.fillRect(0,0,W,H);
       return true;
     }
 
     if(S.type==="radial"){
-      var cx2 = S.px/100*W, cy2 = S.py/100*H;
-      var mx = Math.max(cx2, W-cx2), my = Math.max(cy2, H-cy2);
+      var mx = Math.max(cx0-b.x, b.x+b.w-cx0), my = Math.max(cy0-b.y, b.y+b.h-cy0);
       if(S.shape==="circle"){
         var r = Math.sqrt(mx*mx+my*my);
-        var g2 = ctx.createRadialGradient(cx2,cy2,0,cx2,cy2,r);
+        var g2 = ctx.createRadialGradient(cx0,cy0,0,cx0,cy0,r);
         ajouter(g2); ctx.fillStyle = g2; ctx.fillRect(0,0,W,H);
       } else {
         // farthest-corner en ellipse : demi-axes à la diagonale des demi-côtés les plus longs.
         var rx2 = mx*Math.SQRT2, ry2 = my*Math.SQRT2, k2 = ry2/rx2;
-        ctx.save(); ctx.translate(cx2,cy2); ctx.scale(1, k2);
+        ctx.save(); ctx.translate(cx0,cy0); ctx.scale(1, k2);
         var g3 = ctx.createRadialGradient(0,0,0,0,0,rx2);
         ajouter(g3); ctx.fillStyle = g3;
-        ctx.fillRect(-cx2-W, (-cy2-H)/k2, W*3, (H*3)/k2); ctx.restore();
+        ctx.fillRect(-cx0-W, (-cy0-H)/k2, W*3, (H*3)/k2); ctx.restore();
       }
       return true;
     }
 
     if(typeof ctx.createConicGradient !== "function"){ return false; }
-    var g4 = ctx.createConicGradient((S.angle-90)*Math.PI/180, S.px/100*W, S.py/100*H);
+    var g4 = ctx.createConicGradient((ang-90)*Math.PI/180, cx0, cy0);
     ajouter(g4); ctx.fillStyle = g4; ctx.fillRect(0,0,W,H);
     return true;
   }
@@ -1590,7 +1658,7 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     var cv = document.createElement("canvas");
     cv.width = W; cv.height = H;
     var ctx = cv.getContext("2d");
-    if(!dessiner(ctx, W, H)){
+    if(!dessiner(ctx, W, H, 0)){
       toast("Votre navigateur ne sait pas dessiner un dégradé conique — export impossible.");
       return;
     }
@@ -1603,6 +1671,114 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
   $("dl-css").addEventListener("click", function(){
     telecharger(nomFichier()+".css", nomFichier()+"-css.txt", exportCss());
   });
+
+  /* ---------- vidéo ---------- */
+  // MP4 d'abord : il se lit partout. WebM en repli quand le navigateur ne sait pas encoder en MP4.
+  var TYPES_VIDEO = [
+    ["video/mp4;codecs=avc1.42E01E","mp4"],
+    ["video/mp4","mp4"],
+    ["video/webm;codecs=vp9","webm"],
+    ["video/webm;codecs=vp8","webm"],
+    ["video/webm","webm"]
+  ];
+  function formatVideo(){
+    if(typeof window.MediaRecorder === "undefined" || !MediaRecorder.isTypeSupported){ return null; }
+    for(var i=0;i<TYPES_VIDEO.length;i++){
+      try { if(MediaRecorder.isTypeSupported(TYPES_VIDEO[i][0])){ return TYPES_VIDEO[i]; } }
+      catch(e){ /* format inconnu du navigateur */ }
+    }
+    return null;
+  }
+
+  // Au-delà de 1920 px le fichier dépasse vite la taille acceptée : on ramène à l'échelle.
+  function dimsVideo(){
+    var d = $("size").value.split("x");
+    var W = parseInt(d[0],10), H = parseInt(d[1],10);
+    var f = Math.max(W,H) > 1920 ? 1920/Math.max(W,H) : 1;
+    return [Math.round(W*f/2)*2, Math.round(H*f/2)*2, f < 1];
+  }
+
+  var LIMITE_S = 60;
+  var enregistre = false;
+
+  function renderExport(){
+    var note = $("dl-note"), btn = $("dl-video");
+    var possible = S.anim !== "none" && !!animName();
+    btn.disabled = enregistre || !possible;
+    if(!possible){
+      note.textContent = "La vidéo demande une animation : choisissez un mouvement dans le panneau Animation.";
+      return;
+    }
+    var d = dimsVideo(), t = cycleSecondes();
+    note.textContent = "Une boucle complète de " + round1(t).toString().replace(".",",") + " s, en "
+      + d[0] + " × " + d[1]
+      + (d[2] ? " (ramené sous 1920 px pour rester dans la taille autorisée)" : "")
+      + (t > LIMITE_S ? " — trop long : réduisez la durée de l'animation." : ". L'enregistrement se fait en temps réel.");
+  }
+
+  function enregistrerVideo(){
+    if(enregistre){ return; }
+    if(S.anim === "none" || !animName()){ toast("Choisissez d'abord une animation."); return; }
+
+    var duree = cycleSecondes();
+    if(duree > LIMITE_S){
+      toast("Boucle de " + Math.round(duree) + " s : réduisez la durée de l'animation.");
+      return;
+    }
+    var fmt = formatVideo();
+    if(!fmt){ toast("Ce navigateur ne sait pas enregistrer de vidéo."); return; }
+
+    var d = dimsVideo(), W = d[0], H = d[1];
+    var cv = document.createElement("canvas");
+    cv.width = W; cv.height = H;
+    var ctx = cv.getContext("2d");
+    if(!dessiner(ctx, W, H, phase(0))){
+      toast("Votre navigateur ne sait pas dessiner un dégradé conique.");
+      return;
+    }
+
+    var flux, rec;
+    var debit = clamp(Math.floor(14*1024*1024*8/duree), 1500000, W*H > 1280*720 ? 12000000 : 8000000);
+    try {
+      flux = cv.captureStream(30);
+      rec = new MediaRecorder(flux, { mimeType:fmt[0], videoBitsPerSecond:debit });
+    } catch(e){
+      toast("Enregistrement vidéo refusé par ce navigateur.");
+      return;
+    }
+
+    var morceaux = [], btn = $("dl-video"), libelle = "Vidéo en boucle";
+    enregistre = true;
+    renderExport();
+
+    rec.ondataavailable = function(e){ if(e.data && e.data.size){ morceaux.push(e.data); } };
+    rec.onstop = function(){
+      flux.getTracks().forEach(function(t){ t.stop(); });
+      enregistre = false;
+      btn.textContent = libelle;
+      renderExport();
+      if(!morceaux.length){ toast("Aucune image n'a été enregistrée."); return; }
+      telecharger(nomFichier()+"-"+W+"x"+H+"."+fmt[1], null, new Blob(morceaux, { type:fmt[0] }));
+    };
+
+    rec.start();
+    var t0 = performance.now();
+    (function image(){
+      var ecoule = (performance.now()-t0)/1000, p = ecoule/duree;
+      if(p >= 1){
+        dessiner(ctx, W, H, phase(1));
+        // Un court délai laisse l'encodeur avaler la dernière image.
+        setTimeout(function(){ if(rec.state !== "inactive"){ rec.stop(); } }, 150);
+        return;
+      }
+      dessiner(ctx, W, H, phase(p));
+      btn.textContent = "Enregistrement… " + Math.round(p*100) + " %";
+      requestAnimationFrame(image);
+    })();
+  }
+
+  $("dl-video").addEventListener("click", enregistrerVideo);
+  $("size").addEventListener("change", renderExport);
 
   /* =========================================================
      mémoire

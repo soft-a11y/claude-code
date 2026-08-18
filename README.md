@@ -18,8 +18,9 @@ Aucune dépendance, aucune installation : ouvrez `index.html` dans un navigateur
   Durée, courbe d'accélération et aller-retour réglables.
 - **Contrôle de lisibilité** — ratio de contraste WCAG du texte blanc et du texte noir
   dans le pire cas du dégradé, avec superposition de texte d'essai sur l'aperçu.
-- **Téléchargement** — image PNG jusqu'en 3840 × 2160 (le dégradé est redessiné sur un
-  canevas, pas capturé à l'écran) et fichier CSS.
+- **Téléchargement** — image PNG jusqu'en 3840 × 2160, **vidéo MP4 en boucle** (WebM en
+  repli), et fichier CSS. Le dégradé est redessiné sur un canevas, pas capturé à l'écran :
+  la vidéo couvre exactement un cycle complet, donc elle boucle sans à-coup.
 - **Mémoire** — enregistrement nommé des dégradés dans le navigateur, rappel en un clic,
   et reprise automatique du dernier réglage à la réouverture.
 - **CSS prêt à coller** — l'aperçu et le code exporté partagent exactement les mêmes règles,
@@ -36,6 +37,12 @@ l'interpolation sRGB vers `transparent` ferait virer la tache au gris en cours d
 
 L'accent de l'interface est dérivé de la couleur la plus saturée du dégradé en cours, avec
 une luminosité bornée par thème pour rester lisible en clair comme en sombre.
+
+La vidéo est produite par `MediaRecorder` sur un canevas redessiné image par image. Les
+courbes d'accélération CSS sont réimplémentées en JavaScript (résolution de Bézier cubique)
+et `hue-rotate` est appliqué via sa matrice de la spécification Filter Effects, pour que la
+vidéo suive exactement le rythme et les teintes de l'aperçu. L'enregistrement se fait en
+temps réel : une boucle de 20 s prend 20 s.
 
 Publié comme Artifact, le téléchargement passe par la capacité `downloads` de l'hôte ;
 ouvert en local ou hébergé, il passe par un lien de téléchargement classique.
