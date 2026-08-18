@@ -133,6 +133,8 @@ button,input,select{font:inherit;color:inherit}
 }
 @media (max-width:520px){.canvas{aspect-ratio:4/3}}
 #paint{position:absolute;inset:0;background-repeat:no-repeat}
+#toile{position:absolute;inset:0;width:100%;height:100%;display:block}
+#toile[hidden]{display:none}
 .legib{
   position:absolute;inset:0;display:none;
   flex-direction:column;justify-content:space-between;padding:clamp(1rem,3vw,2rem);
@@ -332,6 +334,7 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     <div class="stage">
       <div class="canvas">
         <div id="paint"></div>
+        <canvas id="toile" hidden></canvas>
         <div class="blobs" id="blobs" hidden></div>
         <div class="legib" id="legib" aria-hidden="true">
           <p class="lt">Texte blanc sur le dégradé</p>
@@ -370,6 +373,7 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
             <button type="button" data-type="radial" aria-pressed="false">Radial</button>
             <button type="button" data-type="conic" aria-pressed="false">Conique</button>
             <button type="button" data-type="mesh" aria-pressed="false">Maille</button>
+            <button type="button" data-type="onde" aria-pressed="false">Onde</button>
           </div>
         </div>
 
@@ -384,6 +388,23 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
             <button type="button" data-shape="circle" aria-pressed="true">Cercle</button>
             <button type="button" data-shape="ellipse" aria-pressed="false">Ellipse</button>
           </div>
+        </div>
+
+        <div class="field" id="f-onde" hidden>
+          <span class="lbl" id="l-forme-onde">Forme de l'onde</span>
+          <div class="seg" role="group" aria-labelledby="l-forme-onde">
+            <button type="button" data-onde="zigzag" aria-pressed="true">Dents de scie</button>
+            <button type="button" data-onde="sinus" aria-pressed="false">Sinusoïde</button>
+            <button type="button" data-onde="rateau" aria-pressed="false">Râteau</button>
+          </div>
+          <label for="freq" style="margin-top:.55rem">Fréquence <span class="val" id="v-freq">26</span></label>
+          <input type="range" id="freq" min="1" max="80" step="1" value="26">
+          <label for="amp">Amplitude <span class="val" id="v-amp">18 %</span></label>
+          <input type="range" id="amp" min="0" max="70" step="1" value="18">
+          <label for="repet">Répétitions <span class="val" id="v-repet">3</span></label>
+          <input type="range" id="repet" min="1" max="8" step="1" value="3">
+          <label for="flou">Flou <span class="val" id="v-flou">2,4 %</span></label>
+          <input type="range" id="flou" min="0" max="8" step="0.2" value="2.4">
         </div>
 
         <div class="field" id="f-mesh" hidden>
@@ -552,6 +573,7 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     type:"mesh", angle:128, px:50, py:50, shape:"circle",
     stops:[{c:"#0B3B6F",p:0},{c:"#1FA8A0",p:52},{c:"#F2E7C9",p:100}],
     base:"#04191E", soft:72,
+    freq:26, amp:18, repet:3, flou:2.4, forme_onde:"zigzag",
     blobs:[
       { c:"#F2FFFB", x:6,  y:29, r:22 },
       { c:"#7CF5D8", x:14, y:35, r:46 },
@@ -629,7 +651,8 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
      construction du CSS
      ========================================================= */
   function isMesh(){ return S.type==="mesh"; }
-  function usesAngle(){ return S.type==="linear" || S.type==="conic"; }
+  function estOnde(){ return S.type==="onde"; }
+  function usesAngle(){ return S.type==="linear" || S.type==="conic" || S.type==="onde"; }
   function rotates(){ return S.anim==="rotation" && usesAngle(); }
 
   function sorted(){ return S.stops.slice().sort(function(a,b){ return a.p-b.p; }); }
@@ -705,6 +728,9 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
   function rules(sel){
     var name = animName(), lines = [];
 
+    // L'onde est peinte sur un canevas : la couche CSS doit rester transparente.
+    if(estOnde()){ return sel + " { background: none; }"; }
+
     if(isMesh()){
       lines.push("  background-color: "+S.base.toLowerCase()+";");
       lines.push("  background-image:\n"+meshLayers("    ")+";");
@@ -730,7 +756,62 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     return css;
   }
 
+  // Pas de CSS possible pour l'onde : on rend la fonction de dessin, réutilisable telle quelle.
+  function exportOnde(){
+    var couleurs = sorted().map(function(o){ return '["'+o.c.toLowerCase()+'", '+round1(o.p)+']'; }).join(', ');
+    return ""
+      + "// Dégradé « onde » — déformation calculée pixel par pixel, sans équivalent CSS.\n"
+      + "// Appelez dessinerOnde(monCanvas) ; phase va de 0 à 1 pour animer.\n"
+      + "function dessinerOnde(cv, phase){\n"
+      + "  var ARRETS = [" + couleurs + "];\n"
+      + "  var ANGLE = " + S.angle + ", FREQ = " + S.freq + ", AMPLI = " + S.amp + ";\n"
+      + "  var REPET = " + Math.round(S.repet) + ", FLOU = " + round1(S.flou) + ", FORME = '" + S.forme_onde + "';\n"
+      + "  var ctx = cv.getContext('2d'), W = cv.width, H = cv.height;\n"
+      + "  var a = ANGLE * Math.PI/180, dx = Math.sin(a), dy = -Math.cos(a);\n"
+      + "  var L = Math.abs(W*dx) + Math.abs(H*dy), P = Math.abs(W*dy) + Math.abs(H*dx);\n"
+      + "  var ampli = AMPLI/100 * L, flou = FLOU/100 * Math.min(W,H);\n"
+      + "  var marge = Math.ceil(ampli + flou*3 + 4);\n"
+      + "  var Lpad = Math.ceil(L + 2*marge), Ph = Math.ceil(P + 2*marge);\n"
+      + "  var onde = function(x){\n"
+      + "    if(FORME === 'sinus'){ return Math.sin(x*Math.PI*2); }\n"
+      + "    if(FORME === 'rateau'){ return 2*(x - Math.floor(x)) - 1; }\n"
+      + "    return 4*Math.abs(x - Math.floor(x+0.5)) - 1;\n"
+      + "  };\n"
+      + "\n"
+      + "  var bande = document.createElement('canvas');\n"
+      + "  bande.width = Lpad; bande.height = 1;\n"
+      + "  var bc = bande.getContext('2d');\n"
+      + "  var g = bc.createLinearGradient(0,0,Lpad,0);\n"
+      + "  for(var r=0;r<REPET;r++){\n"
+      + "    var miroir = REPET > 1 && r % 2 === 1;\n"
+      + "    for(var i=0;i<ARRETS.length;i++){\n"
+      + "      var st = ARRETS[miroir ? ARRETS.length-1-i : i];\n"
+      + "      var frac = miroir ? 1 - st[1]/100 : st[1]/100;\n"
+      + "      g.addColorStop(Math.min(1, Math.max(0, (marge + ((r+frac)/REPET)*L)/Lpad)), st[0]);\n"
+      + "    }\n"
+      + "  }\n"
+      + "  bc.fillStyle = g; bc.fillRect(0,0,Lpad,1);\n"
+      + "\n"
+      + "  var temp = document.createElement('canvas');\n"
+      + "  temp.width = Lpad; temp.height = Ph;\n"
+      + "  var tc = temp.getContext('2d');\n"
+      + "  var pas = Math.max(1, Math.min(4, Math.round(flou/2)));\n"
+      + "  for(var j=0;j<Ph;j+=pas){\n"
+      + "    var t = (j - marge)/Math.max(1,P);\n"
+      + "    tc.drawImage(bande, 0,0,Lpad,1, Math.round(onde(FREQ*t + (phase||0))*ampli), j, Lpad, pas);\n"
+      + "  }\n"
+      + "\n"
+      + "  ctx.save();\n"
+      + "  ctx.translate(W/2, H/2);\n"
+      + "  ctx.rotate(Math.atan2(dy, dx));\n"
+      + "  if(flou > 0.2){ ctx.filter = 'blur(' + flou.toFixed(1) + 'px)'; }\n"
+      + "  ctx.drawImage(temp, -Lpad/2, -Ph/2);\n"
+      + "  ctx.restore();\n"
+      + "}";
+  }
+
   function exportCss(){
+    if(estOnde()){ return exportOnde(); }
     var head = rotates()
       ? "@property --pg-angle {\n  syntax: \"<angle>\";\n  inherits: false;\n  initial-value: "+S.angle+"deg;\n}\n\n"
       : "";
@@ -922,11 +1003,16 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     document.querySelectorAll("[data-shape]").forEach(function(b){
       b.setAttribute("aria-pressed", b.dataset.shape===S.shape ? "true":"false");
     });
+    document.querySelectorAll("[data-onde]").forEach(function(b){
+      b.setAttribute("aria-pressed", b.dataset.onde===S.forme_onde ? "true":"false");
+    });
 
     $("f-angle").hidden = (S.type==="radial" || isMesh());
     $("f-shape").hidden = (S.type!=="radial");
-    $("f-pos").hidden   = (S.type==="linear" || isMesh());
+    $("f-pos").hidden   = (S.type==="linear" || isMesh() || estOnde());
     $("f-mesh").hidden  = !isMesh();
+    $("f-onde").hidden  = !estOnde();
+    $("toile").hidden   = !estOnde();
     $("card-track").hidden = isMesh();
     $("anim-opts").hidden = (S.anim==="none");
     $("anim-note").textContent = noteAnim();
@@ -946,9 +1032,34 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     $("v-px").textContent = S.px+" %";
     $("v-py").textContent = S.py+" %";
     $("v-soft").textContent = S.soft+" %";
+    $("freq").value = S.freq; $("v-freq").textContent = S.freq;
+    $("amp").value = S.amp; $("v-amp").textContent = S.amp+" %";
+    $("repet").value = S.repet; $("v-repet").textContent = S.repet;
+    $("flou").value = S.flou; $("v-flou").textContent = round1(S.flou).toString().replace(".",",")+" %";
     $("v-dur").textContent = round1(S.dur).toString().replace(".",",")+" s";
     $("legib").dataset.on = S.legib ? "1" : "0";
   }
+
+  // L'onde se repeint en continu sur son canevas : le CSS ne peut pas l'animer.
+  var debutOnde = null;
+  (function boucleOnde(){
+    if(estOnde()){
+      var cv = $("toile"), r = cv.getBoundingClientRect();
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var W = Math.max(1, Math.round(r.width*dpr)), H = Math.max(1, Math.round(r.height*dpr));
+      if(cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; }
+      var v = 0;
+      if(S.anim !== "none"){
+        var t = performance.now();
+        if(debutOnde === null){ debutOnde = t; }
+        v = phase(((t - debutOnde)/1000 / (S.alt ? S.dur*2 : S.dur)) % 1);
+      }
+      dessiner(cv.getContext("2d"), W, H, v);
+    } else {
+      debutOnde = null;
+    }
+    requestAnimationFrame(boucleOnde);
+  })();
 
   function render(){
     renderAccent();
@@ -1102,6 +1213,13 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
   $("px").addEventListener("input", function(e){ S.px = +e.target.value; render(); });
   $("py").addEventListener("input", function(e){ S.py = +e.target.value; render(); });
   $("soft").addEventListener("input", function(e){ S.soft = +e.target.value; render(); });
+  $("freq").addEventListener("input", function(e){ S.freq = +e.target.value; render(); });
+  $("amp").addEventListener("input", function(e){ S.amp = +e.target.value; render(); });
+  $("repet").addEventListener("input", function(e){ S.repet = +e.target.value; render(); });
+  $("flou").addEventListener("input", function(e){ S.flou = +e.target.value; render(); });
+  document.querySelectorAll("[data-onde]").forEach(function(b){
+    b.addEventListener("click", function(){ S.forme_onde = b.dataset.onde; render(); });
+  });
   $("base").addEventListener("input", function(e){ S.base = e.target.value.toUpperCase(); render(); });
   $("base-hex").addEventListener("change", function(e){
     if(isHex(e.target.value)){ S.base = normHex(e.target.value); render(); }
@@ -1193,6 +1311,29 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
           rs.push(ri(45,95));
         }
         return { type:"mesh", base:fond, soft:ri(66,92), blobs:taches(cs, rs) };
+      }},
+
+    { id:"onde-braise", n:"Onde braise", d:"bandes chaudes déformées en dents de scie", f:function(){
+        var h = rf(12,42);
+        return { type:"onde", angle:ri(0,35)*10,
+                 freq:ri(14,42), amp:ri(10,28), repet:ri(2,5), flou:round1(rf(1.4,3.6)),
+                 forme_onde:pick(["zigzag","rateau","rateau"]),
+                 stops:[
+                   { c:hsl2hex(h-rf(4,14), rf(55,80), rf(4,10)), p:0 },
+                   { c:hsl2hex(h, rf(85,100), rf(48,58)), p:rf(50,64) },
+                   { c:hsl2hex(h+rf(6,18), rf(80,100), rf(62,74)), p:100 }
+                 ]};
+      }},
+
+    { id:"onde-froide", n:"Onde froide", d:"ondulation douce, teintes profondes", f:function(){
+        var h = ri(170,280);
+        return { type:"onde", angle:ri(0,35)*10,
+                 freq:ri(3,16), amp:ri(18,45), repet:ri(1,3), flou:round1(rf(2,5.5)), forme_onde:"sinus",
+                 stops:[
+                   { c:hsl2hex(h, rf(45,75), rf(6,14)), p:0 },
+                   { c:hsl2hex(h+rf(-30,30), rf(60,90), rf(45,60)), p:rf(45,60) },
+                   { c:hsl2hex(h+rf(-50,50), rf(30,70), rf(78,92)), p:100 }
+                 ]};
       }},
 
     { id:"duo", n:"Duo franc", d:"deux couleurs opposées, du sombre au clair", f:function(){
@@ -1308,6 +1449,7 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
   ];
 
   function animationPour(type, famille){
+    if(type==="onde"){ return pick(["flux","flux","flux","pulsation","spectre"]); }
     if(type==="mesh"){ return pick(["flux","flux","pulsation","spectre"]); }
     if(famille==="bandes"){ return pick(["rotation","flux","none"]); }
     if(type==="conic"){ return pick(["rotation","rotation","spectre"]); }
@@ -1315,7 +1457,7 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     return pick(["flux","flux","spectre","pulsation"]);
   }
 
-  var NOMS_TYPE = { linear:"linéaire", radial:"radial", conic:"conique", mesh:"maille" };
+  var NOMS_TYPE = { linear:"linéaire", radial:"radial", conic:"conique", mesh:"maille", onde:"onde" };
   var derniereFamille = null;
 
   function appliquer(fam){
@@ -1327,6 +1469,11 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     S.shape = r.shape || S.shape;
     if(r.base){ S.base = r.base; }
     if(r.soft){ S.soft = r.soft; }
+    if(r.freq !== undefined){ S.freq = r.freq; }
+    if(r.amp !== undefined){ S.amp = r.amp; }
+    if(r.repet !== undefined){ S.repet = r.repet; }
+    if(r.flou !== undefined){ S.flou = r.flou; }
+    if(r.forme_onde){ S.forme_onde = r.forme_onde; }
     if(r.blobs){
       S.blobs = r.blobs.slice(0,MAX).map(function(b){
         return { c:b.c, x:clamp(Math.round(b.x),0,100), y:clamp(Math.round(b.y),0,100), r:clamp(Math.round(b.r),5,160) };
@@ -1417,6 +1564,8 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
       ["#F2FFFB",6,29,22],["#7CF5D8",14,35,46],["#18D9A0",30,48,80],["#0E5C63",80,82,98]]},
     {n:"Brume rose", t:"mesh", base:"#F7EEF2", soft:84, b:[
       ["#FFD9E8",22,26,60],["#C9B8FF",78,32,72],["#FFE9C7",50,84,80]]},
+    {n:"Braise ondulée", t:"onde", a:168, freq:24, amp:20, repet:3, flou:2, forme:"rateau",
+      s:[["#170802",0],["#230D02",30],["#FF7C15",66],["#FFA23A",100]]},
     {n:"Aurore",  t:"linear", a:160, s:[["#0A1E3C",0],["#12695F",46],["#8CE0A8",100]]},
     {n:"Braise",  t:"linear", a:35,  s:[["#2B0B16",0],["#B4341C",55],["#F2B33D",100]]},
     {n:"Marée",   t:"linear", a:200, s:[["#E8DCC2",0],["#6FBFB6",60],["#123A54",100]]},
@@ -1426,6 +1575,10 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
   ];
 
   function apercuPreset(p){
+    if(p.t==="onde"){
+      var st = p.s.map(function(x){ return x[0]+" "+x[1]+"%"; }).join(", ");
+      return { backgroundImage:"repeating-linear-gradient(70deg, "+st+")" };
+    }
     if(p.t==="mesh"){
       var couches = p.b.map(function(b){
         return "radial-gradient("+b[3]+"% "+b[3]+"% at "+b[1]+"% "+b[2]+"%, "+b[0]+" 0%, "
@@ -1454,6 +1607,10 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
       if(p.t==="mesh"){
         S.base = p.base; S.soft = p.soft;
         S.blobs = p.b.map(function(x){ return { c:x[0], x:x[1], y:x[2], r:x[3] }; });
+      } else if(p.t==="onde"){
+        S.angle = p.a; S.freq = p.freq; S.amp = p.amp;
+        S.repet = p.repet; S.flou = p.flou; S.forme_onde = p.forme;
+        S.stops = p.s.map(function(x){ return { c:x[0], p:x[1] }; });
       } else {
         S.angle = p.a;
         S.stops = p.s.map(function(s){ return { c:s[0], p:s[1] }; });
@@ -1525,11 +1682,104 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     return { x:0, y:0, w:W, h:H };
   }
 
+  /* ---------- dégradé en onde ----------
+     Un dégradé répété, déformé par une onde, puis flouté. Aucun background-image
+     CSS ne sait faire ça : le rendu est calculé sur un canevas.
+
+     Astuce de vitesse : le long de l'axe du dégradé toutes les lignes portent la
+     MÊME rampe, simplement décalée. On peint donc la rampe une fois dans une
+     bande de 1 pixel de haut, puis on la recopie ligne par ligne avec son décalage.
+     ------------------------------------------------------------------ */
+  function ondeur(x){
+    if(S.forme_onde === "sinus"){ return Math.sin(x*Math.PI*2); }
+    // Râteau : montée lente, chute brutale — les dents penchent toutes du même côté.
+    if(S.forme_onde === "rateau"){ return 2*(x - Math.floor(x)) - 1; }
+    // Dents de scie : triangle symétrique sur [-1, 1].
+    return 4*Math.abs(x - Math.floor(x + 0.5)) - 1;
+  }
+
+  // La rampe est répétée, et miroitée une fois sur deux pour éviter les ruptures.
+  function rampe(bc, Lpad, pad, L){
+    var g = bc.createLinearGradient(0,0,Lpad,0);
+    var st = sorted(), n = Math.max(1, Math.round(S.repet)), r, i;
+    for(r=0;r<n;r++){
+      var miroir = (n > 1) && (r % 2 === 1);
+      for(i=0;i<st.length;i++){
+        var sp = st[miroir ? (st.length-1-i) : i];
+        var frac = miroir ? (1 - sp.p/100) : (sp.p/100);
+        g.addColorStop(clamp((pad + ((r + frac)/n)*L)/Lpad, 0, 1), sp.c);
+      }
+    }
+    return g;
+  }
+
+  function dessinerOnde(ctx, W, H, v, ang){
+    var a = ang*Math.PI/180, dx = Math.sin(a), dy = -Math.cos(a);
+    var L = Math.abs(W*dx) + Math.abs(H*dy);          // longueur de la rampe
+    var P = Math.abs(W*dy) + Math.abs(H*dx);          // étendue perpendiculaire
+    var hr = S.anim==="spectre" ? 360*v : 0;
+    var ampli = S.amp/100 * L * (S.anim==="pulsation" ? lerp(0.25,1,v) : 1);
+    var flouPx = S.flou/100 * Math.min(W,H);
+    var marge = Math.ceil(ampli + flouPx*3 + 4);
+
+    var Lpad = Math.ceil(L + 2*marge);
+    var Ph   = Math.ceil(P + 2*marge);
+
+    var bande = document.createElement("canvas");
+    bande.width = Lpad; bande.height = 1;
+    var bc = bande.getContext("2d");
+    // La teinte se décale sur les arrêts : hue-rotate coûterait un filtre par image.
+    var memo = S.stops;
+    if(hr){ S.stops = memo.map(function(o){ return { c:tourner(o.c, hr), p:o.p }; }); }
+    bc.fillStyle = rampe(bc, Lpad, marge, L);
+    bc.fillRect(0,0,Lpad,1);
+    S.stops = memo;
+
+    var temp = document.createElement("canvas");
+    temp.width = Lpad; temp.height = Ph;
+    var tc = temp.getContext("2d");
+    var phase = (S.anim==="flux") ? v : 0;
+    // Le flou masque l'escalier : on épaissit les tranches pour tenir la cadence.
+    var pas = Math.max(1, Math.min(2, Math.round(flouPx/3)));
+    for(var j=0;j<Ph;j+=pas){
+      var t = (j - marge)/Math.max(1,P);
+      var decal = ondeur(S.freq*t + phase) * ampli;
+      tc.drawImage(bande, 0,0,Lpad,1, Math.round(decal), j, Lpad, pas);
+    }
+
+    ctx.save();
+    ctx.translate(W/2, H/2);
+    ctx.rotate(Math.atan2(dy, dx));
+    if(flouPx > 0.2){
+      if(typeof ctx.filter === "string"){
+        ctx.filter = "blur(" + flouPx.toFixed(1) + "px)";
+        ctx.drawImage(temp, -Lpad/2, -Ph/2);
+      } else {
+        // Sans ctx.filter : réduire puis agrandir donne un flou approché.
+        var k = Math.max(2, Math.round(flouPx));
+        var petit = document.createElement("canvas");
+        petit.width = Math.max(1, Math.round(Lpad/k));
+        petit.height = Math.max(1, Math.round(Ph/k));
+        var pcx = petit.getContext("2d");
+        pcx.imageSmoothingQuality = "high";
+        pcx.drawImage(temp, 0,0, petit.width, petit.height);
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(petit, -Lpad/2, -Ph/2, Lpad, Ph);
+      }
+    } else {
+      ctx.drawImage(temp, -Lpad/2, -Ph/2);
+    }
+    ctx.restore();
+    return true;
+  }
+
   function dessiner(ctx, W, H, v){
     v = v || 0;
     var b = boite(v, W, H), i;
     var hr = S.anim==="spectre" ? 360*v : 0;
     var ang = (S.anim==="rotation" && usesAngle()) ? S.angle + 360*v : S.angle;
+
+    if(estOnde()){ return dessinerOnde(ctx, W, H, v, ang); }
 
     if(isMesh()){
       ctx.fillStyle = tourner(S.base, hr);
@@ -1649,7 +1899,7 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     });
   }
 
-  var SLUG = { linear:"lineaire", radial:"radial", conic:"conique", mesh:"maille" };
+  var SLUG = { linear:"lineaire", radial:"radial", conic:"conique", mesh:"maille", onde:"onde" };
   function nomFichier(){ return "prisme-" + SLUG[S.type]; }
 
   $("dl-png").addEventListener("click", function(){
@@ -1800,6 +2050,7 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
       type:S.type, angle:S.angle, px:S.px, py:S.py, shape:S.shape,
       stops:S.stops.map(function(s){ return {c:s.c,p:s.p}; }),
       base:S.base, soft:S.soft,
+      freq:S.freq, amp:S.amp, repet:S.repet, flou:S.flou, forme_onde:S.forme_onde,
       blobs:S.blobs.map(function(b){ return {c:b.c,x:b.x,y:b.y,r:b.r}; }),
       anim:S.anim, dur:S.dur, ease:S.ease, alt:S.alt
     };
@@ -1811,6 +2062,10 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     if(e.blobs && e.blobs.length >= 1){ S.blobs = e.blobs; }
     if(e.base){ S.base = e.base; }
     if(typeof e.soft === "number"){ S.soft = e.soft; }
+    ["freq","amp","repet","flou"].forEach(function(k){
+      if(typeof e[k] === "number"){ S[k] = e[k]; }
+    });
+    if(e.forme_onde){ S.forme_onde = e.forme_onde; }
     S.anim = e.anim || "none"; S.dur = e.dur || 12;
     S.ease = e.ease || "ease-in-out"; S.alt = !!e.alt;
     S.sel = 0;

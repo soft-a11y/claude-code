@@ -5,7 +5,11 @@ Aucune dépendance, aucune installation : ouvrez `index.html` dans un navigateur
 
 ## Ce que ça fait
 
-- **Quatre types de dégradé** — `linear`, `radial`, `conic`, et **maille** : plusieurs
+- **Cinq types de dégradé** — `linear`, `radial`, `conic`, **maille**, et **onde** :
+  un dégradé répété puis déformé par une onde (dents de scie, sinusoïde ou râteau)
+  et flouté. Calculé sur un canevas, sans équivalent CSS — la sortie devient alors
+  une fonction JavaScript réutilisable telle quelle.
+- **La maille** : plusieurs
   `radial-gradient` transparents superposés sur un fond uni, pour ces nappes lumineuses
   qu'un dégradé simple ne sait pas produire. Les taches se déplacent à la souris
   directement sur l'aperçu, ou aux flèches du clavier.
@@ -25,6 +29,13 @@ Aucune dépendance, aucune installation : ouvrez `index.html` dans un navigateur
   et reprise automatique du dernier réglage à la réouverture.
 - **CSS prêt à coller** — l'aperçu et le code exporté partagent exactement les mêmes règles,
   y compris les `@keyframes` et le repli `prefers-reduced-motion`.
+
+## L'onde, en deux mots
+
+Le long de l'axe du dégradé, toutes les lignes portent la même rampe, simplement
+décalée par l'onde. Le rendu peint donc la rampe une seule fois dans une bande
+d'un pixel de haut, puis la recopie ligne par ligne avec son décalage — ce qui
+rend l'aperçu animable en temps réel là où un calcul pixel par pixel ramerait.
 
 ## Notes techniques
 
