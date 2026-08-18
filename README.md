@@ -23,7 +23,7 @@ Aucune dépendance, aucune installation : ouvrez `index.html` dans un navigateur
 - **Contrôle de lisibilité** — ratio de contraste WCAG du texte blanc et du texte noir
   dans le pire cas du dégradé, avec superposition de texte d'essai sur l'aperçu.
 - **Téléchargement** — image PNG jusqu'en 3840 × 2160, **vidéo MP4 en boucle** (WebM en
-  repli), et fichier CSS. Le dégradé est redessiné sur un canevas, pas capturé à l'écran :
+  repli) relue dans un lecteur avant d'être enregistrée, et fichier CSS. Le dégradé est redessiné sur un canevas, pas capturé à l'écran :
   la vidéo couvre exactement un cycle complet, donc elle boucle sans à-coup.
 - **Mémoire** — enregistrement nommé des dégradés dans le navigateur, rappel en un clic,
   et reprise automatique du dernier réglage à la réouverture.
@@ -36,6 +36,21 @@ Le long de l'axe du dégradé, toutes les lignes portent la même rampe, simplem
 décalée par l'onde. Le rendu peint donc la rampe une seule fois dans une bande
 d'un pixel de haut, puis la recopie ligne par ligne avec son décalage — ce qui
 rend l'aperçu animable en temps réel là où un calcul pixel par pixel ramerait.
+
+## Ce qui garde l'aperçu vif
+
+Trois choix pèsent sur la réactivité :
+
+- **Rendu paresseux.** Sans animation, le canevas de l'onde n'est repeint qu'au
+  changement de réglage. Repeindre soixante fois par seconde une image fixe
+  chauffait la machine pour rien.
+- **Chemin léger pendant qu'on fait glisser un curseur.** L'aperçu suit
+  immédiatement ; la reconstruction de la liste des couleurs, le calcul du
+  contraste et la réécriture du CSS attendent la fin du geste.
+- **Surface peinte réduite.** Une tache de maille s'éteint en alpha 0 bien avant
+  le bord : la peindre sur trois fois la largeur du cadre déposait neuf fois trop
+  de pixels. Et l'onde, quand elle est floue, est calculée en réduit puis
+  agrandie — son coût cesse alors de dépendre de la taille d'export.
 
 ## Notes techniques
 

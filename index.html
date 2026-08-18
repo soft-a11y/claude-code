@@ -290,6 +290,12 @@ input[type=color]::-moz-color-swatch{border:0;border-radius:5px}
 .tag.mid{color:var(--warn)}
 .tag.fail{color:var(--bad)}
 
+#video-bloc{margin-top:.7rem;padding-top:.7rem;border-top:1px solid var(--line)}
+#video-lecteur{
+  width:100%;display:block;border-radius:8px;border:1px solid var(--line);
+  background:#000;aspect-ratio:16/9;object-fit:contain;
+}
+
 /* ---------- sortie ---------- */
 .code{
   margin:0;padding:1rem;overflow-x:auto;background:var(--surface-2);
@@ -528,6 +534,16 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
         </div>
         <button class="btn btn-primary" id="dl-video" type="button">Vidéo en boucle</button>
         <p class="hint" id="dl-note" style="margin-top:.55rem"></p>
+
+        <div id="video-bloc" hidden>
+          <video id="video-lecteur" loop muted playsinline controls
+                 aria-label="Aperçu de la vidéo enregistrée"></video>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="video-garder" type="button">Télécharger</button>
+            <button class="btn" id="video-jeter" type="button">Refaire</button>
+          </div>
+          <p class="hint" id="video-info" style="margin-top:.45rem"></p>
+        </div>
         <p class="hint" style="margin-top:.35rem">Le PNG est une capture fixe, figée sur la première image de l'animation.</p>
       </section>
 
@@ -892,6 +908,8 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
 
   function renderStops(){
     var box = $("stops");
+    // Reconstruire pendant une saisie ferait perdre le focus et le curseur texte.
+    if(box.contains(document.activeElement)){ return; }
     box.innerHTML = "";
 
     if(isMesh()){
@@ -1040,28 +1058,58 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     $("legib").dataset.on = S.legib ? "1" : "0";
   }
 
-  // L'onde se repeint en continu sur son canevas : le CSS ne peut pas l'animer.
-  var debutOnde = null;
+  // L'onde se repeint sur son canevas : le CSS ne peut pas l'animer.
+  // Sans mouvement, on ne redessine qu'au changement de réglage — repeindre
+  // 60 fois par seconde une image fixe chauffait la machine pour rien.
+  var debutOnde = null, ondeSale = true;
+  function salirOnde(){ ondeSale = true; }
+
   (function boucleOnde(){
-    if(estOnde()){
+    // Pendant l'enregistrement, toute la puissance va à la vidéo.
+    if(estOnde() && !document.hidden && !enregistre){
       var cv = $("toile"), r = cv.getBoundingClientRect();
       var dpr = Math.min(window.devicePixelRatio || 1, 2);
       var W = Math.max(1, Math.round(r.width*dpr)), H = Math.max(1, Math.round(r.height*dpr));
-      if(cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; }
-      var v = 0;
-      if(S.anim !== "none"){
-        var t = performance.now();
-        if(debutOnde === null){ debutOnde = t; }
-        v = phase(((t - debutOnde)/1000 / (S.alt ? S.dur*2 : S.dur)) % 1);
+      var redimensionne = (cv.width !== W || cv.height !== H);
+      if(redimensionne){ cv.width = W; cv.height = H; }
+      var anime = (S.anim !== "none");
+      if(anime || ondeSale || redimensionne){
+        var v = 0;
+        if(anime){
+          var t = performance.now();
+          if(debutOnde === null){ debutOnde = t; }
+          v = phase(((t - debutOnde)/1000 / (S.alt ? S.dur*2 : S.dur)) % 1);
+        }
+        dessiner(cv.getContext("2d"), W, H, v);
+        ondeSale = false;
       }
-      dessiner(cv.getContext("2d"), W, H, v);
     } else {
       debutOnde = null;
     }
     requestAnimationFrame(boucleOnde);
   })();
 
+  // Un curseur qu'on fait glisser n'a pas besoin de reconstruire la liste des
+  // couleurs ni de réécrire le CSS à chaque pixel : l'aperçu suit tout de suite,
+  // le reste rattrape juste après.
+  var minuterieLourd;
+  function rendreVite(){
+    salirOnde();
+    renderAccent();
+    live.textContent = rules("#paint");
+    renderControls();
+    clearTimeout(minuterieLourd);
+    minuterieLourd = setTimeout(function(){
+      renderTrack(); renderBlobs(); renderStops(); renderContrast();
+      $("css").textContent = exportCss();
+      renderExport();
+      memoriser();
+    }, 110);
+  }
+
   function render(){
+    clearTimeout(minuterieLourd);
+    salirOnde();
     renderAccent();
     live.textContent = rules("#paint");
     renderTrack();
@@ -1209,14 +1257,14 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
   document.querySelectorAll("[data-shape]").forEach(function(b){
     b.addEventListener("click", function(){ S.shape = b.dataset.shape; render(); });
   });
-  $("angle").addEventListener("input", function(e){ S.angle = +e.target.value; render(); });
-  $("px").addEventListener("input", function(e){ S.px = +e.target.value; render(); });
-  $("py").addEventListener("input", function(e){ S.py = +e.target.value; render(); });
-  $("soft").addEventListener("input", function(e){ S.soft = +e.target.value; render(); });
-  $("freq").addEventListener("input", function(e){ S.freq = +e.target.value; render(); });
-  $("amp").addEventListener("input", function(e){ S.amp = +e.target.value; render(); });
-  $("repet").addEventListener("input", function(e){ S.repet = +e.target.value; render(); });
-  $("flou").addEventListener("input", function(e){ S.flou = +e.target.value; render(); });
+  $("angle").addEventListener("input", function(e){ S.angle = +e.target.value; rendreVite(); });
+  $("px").addEventListener("input", function(e){ S.px = +e.target.value; rendreVite(); });
+  $("py").addEventListener("input", function(e){ S.py = +e.target.value; rendreVite(); });
+  $("soft").addEventListener("input", function(e){ S.soft = +e.target.value; rendreVite(); });
+  $("freq").addEventListener("input", function(e){ S.freq = +e.target.value; rendreVite(); });
+  $("amp").addEventListener("input", function(e){ S.amp = +e.target.value; rendreVite(); });
+  $("repet").addEventListener("input", function(e){ S.repet = +e.target.value; rendreVite(); });
+  $("flou").addEventListener("input", function(e){ S.flou = +e.target.value; rendreVite(); });
   document.querySelectorAll("[data-onde]").forEach(function(b){
     b.addEventListener("click", function(){ S.forme_onde = b.dataset.onde; render(); });
   });
@@ -1233,7 +1281,7 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     } else { S.alt = true; }
     render();
   });
-  $("dur").addEventListener("input", function(e){ S.dur = +e.target.value; render(); });
+  $("dur").addEventListener("input", function(e){ S.dur = +e.target.value; rendreVite(); });
   $("ease").addEventListener("change", function(e){ S.ease = e.target.value; render(); });
   $("alt").addEventListener("change", function(e){ S.alt = e.target.checked; render(); });
   $("legib-on").addEventListener("change", function(e){ S.legib = e.target.checked; render(); });
@@ -1713,6 +1761,23 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     return g;
   }
 
+  var _bande = null, _temp = null, _flou = null;
+  function cacheBande(L){
+    if(!_bande){ _bande = document.createElement("canvas"); _bande.height = 1; }
+    if(_bande.width !== L){ _bande.width = L; }
+    return _bande;
+  }
+  function cacheTemp(L, H){
+    if(!_temp){ _temp = document.createElement("canvas"); }
+    if(_temp.width !== L || _temp.height !== H){ _temp.width = L; _temp.height = H; }
+    return _temp;
+  }
+  function cacheFlou(L, H){
+    if(!_flou){ _flou = document.createElement("canvas"); }
+    if(_flou.width !== L || _flou.height !== H){ _flou.width = L; _flou.height = H; }
+    return _flou;
+  }
+
   function dessinerOnde(ctx, W, H, v, ang){
     var a = ang*Math.PI/180, dx = Math.sin(a), dy = -Math.cos(a);
     var L = Math.abs(W*dx) + Math.abs(H*dy);          // longueur de la rampe
@@ -1720,55 +1785,57 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     var hr = S.anim==="spectre" ? 360*v : 0;
     var ampli = S.amp/100 * L * (S.anim==="pulsation" ? lerp(0.25,1,v) : 1);
     var flouPx = S.flou/100 * Math.min(W,H);
-    var marge = Math.ceil(ampli + flouPx*3 + 4);
+    var marge = ampli + flouPx*3 + 4;
+    var Lpad = L + 2*marge, Ph = P + 2*marge;
 
-    var Lpad = Math.ceil(L + 2*marge);
-    var Ph   = Math.ceil(P + 2*marge);
+    // Une image floue n'a pas besoin d'être calculée à pleine résolution :
+    // on travaille en réduit puis on agrandit. Le coût cesse alors de dépendre
+    // de la taille d'export, ce qui rend la vidéo tenable en 1920 × 1080.
+    var ech = (flouPx > 1) ? Math.min(1, 900/Math.max(Lpad, Ph)) : 1;
+    var Lw = Math.ceil(Lpad*ech), Hw = Math.ceil(Ph*ech);
+    var margeW = marge*ech, ampliW = ampli*ech, flouW = flouPx*ech, Pw = P*ech;
 
-    var bande = document.createElement("canvas");
-    bande.width = Lpad; bande.height = 1;
+    var bande = cacheBande(Lw);
     var bc = bande.getContext("2d");
-    // La teinte se décale sur les arrêts : hue-rotate coûterait un filtre par image.
+    // La teinte se décale sur les arrêts : un filtre par image coûterait bien plus.
     var memo = S.stops;
     if(hr){ S.stops = memo.map(function(o){ return { c:tourner(o.c, hr), p:o.p }; }); }
-    bc.fillStyle = rampe(bc, Lpad, marge, L);
-    bc.fillRect(0,0,Lpad,1);
+    bc.clearRect(0,0,Lw,1);
+    bc.fillStyle = rampe(bc, Lw, margeW, L*ech);
+    bc.fillRect(0,0,Lw,1);
     S.stops = memo;
 
-    var temp = document.createElement("canvas");
-    temp.width = Lpad; temp.height = Ph;
+    var temp = cacheTemp(Lw, Hw);
     var tc = temp.getContext("2d");
+    tc.clearRect(0,0,Lw,Hw);
     var phase = (S.anim==="flux") ? v : 0;
     // Le flou masque l'escalier : on épaissit les tranches pour tenir la cadence.
-    var pas = Math.max(1, Math.min(2, Math.round(flouPx/3)));
-    for(var j=0;j<Ph;j+=pas){
-      var t = (j - marge)/Math.max(1,P);
-      var decal = ondeur(S.freq*t + phase) * ampli;
-      tc.drawImage(bande, 0,0,Lpad,1, Math.round(decal), j, Lpad, pas);
+    var pas = Math.max(1, Math.min(2, Math.round(flouW/3)));
+    for(var j=0;j<Hw;j+=pas){
+      var t = (j - margeW)/Math.max(1, Pw);
+      var decal = ondeur(S.freq*t + phase) * ampliW;
+      tc.drawImage(bande, 0,0,Lw,1, Math.round(decal), j, Lw, pas);
+    }
+
+    var source = temp;
+    if(flouW > 0.3){
+      // Le flou est appliqué en réduit : agrandi ensuite, il retrouve son rayon.
+      var doux = cacheFlou(Lw, Hw);
+      var dc = doux.getContext("2d");
+      dc.clearRect(0,0,Lw,Hw);
+      if(typeof dc.filter === "string"){
+        dc.filter = "blur(" + flouW.toFixed(2) + "px)";
+        dc.drawImage(temp, 0, 0);
+        dc.filter = "none";
+        source = doux;
+      }
     }
 
     ctx.save();
     ctx.translate(W/2, H/2);
     ctx.rotate(Math.atan2(dy, dx));
-    if(flouPx > 0.2){
-      if(typeof ctx.filter === "string"){
-        ctx.filter = "blur(" + flouPx.toFixed(1) + "px)";
-        ctx.drawImage(temp, -Lpad/2, -Ph/2);
-      } else {
-        // Sans ctx.filter : réduire puis agrandir donne un flou approché.
-        var k = Math.max(2, Math.round(flouPx));
-        var petit = document.createElement("canvas");
-        petit.width = Math.max(1, Math.round(Lpad/k));
-        petit.height = Math.max(1, Math.round(Ph/k));
-        var pcx = petit.getContext("2d");
-        pcx.imageSmoothingQuality = "high";
-        pcx.drawImage(temp, 0,0, petit.width, petit.height);
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(petit, -Lpad/2, -Ph/2, Lpad, Ph);
-      }
-    } else {
-      ctx.drawImage(temp, -Lpad/2, -Ph/2);
-    }
+    ctx.imageSmoothingQuality = (source === temp) ? "high" : "medium";
+    ctx.drawImage(source, 0, 0, Lw, Hw, -Lpad/2, -Ph/2, Lpad, Ph);
     ctx.restore();
     return true;
   }
@@ -1800,8 +1867,10 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
         g.addColorStop(clamp(S.soft*0.45/100,0,1), rgba(c,.55));
         g.addColorStop(clamp(S.soft/100,0,1), rgba(c,0));
         ctx.fillStyle = g;
-        // Rectangle exprimé dans l'espace déjà translaté et mis à l'échelle.
-        ctx.fillRect(-cx-W, (-cy-H)/k, W*3, (H*3)/k);
+        // La tache s'éteint en alpha 0 à « soft » % du rayon : au-delà, peindre
+        // ne dépose rien. On couvrait 3 W × 3 H par tache, soit neuf fois trop.
+        var R = rx*Math.max(S.soft,1)/100 + 2;
+        ctx.fillRect(-R, -R, 2*R, 2*R);
         ctx.restore();
       }
       return true;
@@ -2008,17 +2077,21 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
       btn.textContent = libelle;
       renderExport();
       if(!morceaux.length){ toast("Aucune image n'a été enregistrée."); return; }
-      telecharger(nomFichier()+"-"+W+"x"+H+"."+fmt[1], null, new Blob(morceaux, { type:fmt[0] }));
+      // On montre le résultat avant de le rendre : mieux vaut juger la boucle
+      // dans un lecteur que télécharger un fichier à l'aveugle.
+      montrerVideo(new Blob(morceaux, { type:fmt[0] }),
+                   nomFichier()+"-"+W+"x"+H+"."+fmt[1], W, H, duree);
     };
 
-    rec.start();
+    // Morceaux périodiques : sur une boucle courte, attendre la fin ne rendait rien.
+    rec.start(200);
     var t0 = performance.now();
     (function image(){
       var ecoule = (performance.now()-t0)/1000, p = ecoule/duree;
       if(p >= 1){
         dessiner(ctx, W, H, phase(1));
-        // Un court délai laisse l'encodeur avaler la dernière image.
-        setTimeout(function(){ if(rec.state !== "inactive"){ rec.stop(); } }, 150);
+        // Le délai laisse l'encodeur avaler les dernières images.
+        setTimeout(function(){ if(rec.state !== "inactive"){ rec.stop(); } }, 400);
         return;
       }
       dessiner(ctx, W, H, phase(p));
@@ -2026,6 +2099,48 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
       requestAnimationFrame(image);
     })();
   }
+
+  /* ---------- lecteur de la vidéo enregistrée ---------- */
+  var videoBlob = null, videoNom = "", videoUrl = null;
+
+  function oublierVideo(){
+    if(videoUrl){ URL.revokeObjectURL(videoUrl); videoUrl = null; }
+    videoBlob = null; videoNom = "";
+    $("video-lecteur").removeAttribute("src");
+    $("video-lecteur").load();
+    $("video-bloc").hidden = true;
+  }
+
+  function montrerVideo(blob, nom, W, H, duree){
+    oublierVideo();
+    videoBlob = blob; videoNom = nom;
+    videoUrl = URL.createObjectURL(blob);
+
+    var lecteur = $("video-lecteur");
+    lecteur.src = videoUrl;
+    lecteur.style.aspectRatio = W + " / " + H;
+    var lecture = lecteur.play();
+    // Un navigateur peut refuser la lecture automatique : les contrôles restent là.
+    if(lecture && lecture.catch){ lecture.catch(function(){}); }
+
+    var poids = blob.size / 1024;
+    $("video-info").textContent =
+      W + " × " + H + " · " + round1(duree).toString().replace(".",",") + " s · "
+      + (poids > 1024 ? (poids/1024).toFixed(1) + " Mo" : Math.round(poids) + " Ko")
+      + " · " + nom.split(".").pop().toUpperCase();
+    $("video-garder").textContent = "Télécharger le " + nom.split(".").pop().toUpperCase();
+    $("video-bloc").hidden = false;
+    toast("Vidéo prête — regardez la boucle avant de télécharger.");
+  }
+
+  $("video-garder").addEventListener("click", function(){
+    if(!videoBlob){ return; }
+    telecharger(videoNom, null, videoBlob);
+  });
+  $("video-jeter").addEventListener("click", function(){
+    oublierVideo();
+    toast("Enregistrement effacé.");
+  });
 
   $("dl-video").addEventListener("click", enregistrerVideo);
   $("size").addEventListener("change", renderExport);
