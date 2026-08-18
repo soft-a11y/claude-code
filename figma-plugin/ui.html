@@ -107,6 +107,36 @@
   <span>noir <b id="c-noir">—</b></span>
 </div>
 
+<h2>Animation</h2>
+<select id="mouvement">
+  <option value="none">Aucun — dégradé fixe</option>
+  <option value="flux">Flux — le dégradé glisse</option>
+  <option value="rotation">Rotation — l'angle tourne</option>
+  <option value="pulsation">Pulsation — le dégradé respire</option>
+  <option value="spectre">Spectre — les teintes défilent</option>
+</select>
+<div id="reg-anim">
+  <div class="rang" style="margin-top:6px">
+    <span class="lbl">Durée</span>
+    <input type="range" id="duree" min="1" max="40" step="0.5" value="12">
+    <input type="number" id="duree-n" min="1" max="40" step="0.5" value="12">
+  </div>
+  <div class="rang">
+    <span class="lbl">Courbe</span>
+    <select id="courbe">
+      <option value="ease-in-out">ease-in-out — souple</option>
+      <option value="linear">linear — régulier</option>
+      <option value="ease">ease — départ vif</option>
+      <option value="cubic-bezier(.65,0,.35,1)">cubic-bezier — marqué</option>
+    </select>
+  </div>
+  <div class="rang">
+    <input type="checkbox" id="aller" checked style="width:auto;flex:none">
+    <label for="aller">Aller-retour</label>
+  </div>
+</div>
+<p class="note" id="note-anim"></p>
+
 <h2>Poser dans le fichier</h2>
 <div class="rang">
   <span class="lbl">Taille</span>
@@ -118,6 +148,7 @@
   <button class="act primaire" id="creer">Créer un cadre</button>
   <button class="act" id="appliquer" disabled>Appliquer à la sélection</button>
 </div>
+<button class="act" id="video" style="margin-top:6px" disabled>Créer une vidéo</button>
 <p class="etat" id="etat"></p>
 
 <script>
@@ -128,6 +159,7 @@
     type:"mesh", angle:128, px:50, py:50, shape:"circle",
     stops:[{c:"#0B3B6F",p:0},{c:"#1FA8A0",p:52},{c:"#F2E7C9",p:100}],
     base:"#04191E", soft:72,
+    anim:"none", dur:12, ease:"ease-in-out", alt:true,
     blobs:[
       { c:"#F2FFFB", x:6,  y:29, r:22 },
       { c:"#7CF5D8", x:14, y:35, r:46 },
@@ -138,6 +170,8 @@
   var MAX = 6;
 
   var $ = function(id){ return document.getElementById(id); };
+  var enregistre = false;   // vrai pendant l'enregistrement vidéo
+  var dernierBlob = null, dernierNom = "";
   function clamp(v,a,b){ return Math.min(b,Math.max(a,v)); }
   function rf(a,b){ return Math.random()*(b-a)+a; }
   function ri(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
@@ -184,56 +218,127 @@
   /* ---------- aperçu sur canevas ---------- */
   function sorted(){ return S.stops.slice().sort(function(a,b){ return a.p-b.p; }); }
 
-  function dessiner(ctx, W, H){
-    var i;
+  // Courbes d'accélération du CSS, pour que la vidéo suive le rythme de l'aperçu.
+  var COURBES = {
+    "linear":[0,0,1,1], "ease":[.25,.1,.25,1],
+    "ease-in-out":[.42,0,.58,1], "cubic-bezier(.65,0,.35,1)":[.65,0,.35,1]
+  };
+  function bezier(nom, x){
+    var c = COURBES[nom] || COURBES["ease-in-out"];
+    var x1=c[0], y1=c[1], x2=c[2], y2=c[3];
+    if(x1===0 && y1===0 && x2===1 && y2===1){ return x; }
+    var t=x, i, fx, dx, u;
+    for(i=0;i<8;i++){
+      u = 1-t;
+      fx = 3*u*u*t*x1 + 3*u*t*t*x2 + t*t*t - x;
+      dx = 3*u*u*x1 + 6*u*t*(x2-x1) + 3*t*t*(1-x2);
+      if(Math.abs(dx) < 1e-6){ break; }
+      t = clamp(t - fx/dx, 0, 1);
+    }
+    u = 1-t;
+    return 3*u*u*t*y1 + 3*u*t*t*y2 + t*t*t;
+  }
+  // Avec l'aller-retour, la seconde moitié du cycle rejoue à l'envers.
+  function phase(p){
+    p = clamp(p,0,1);
+    if(!S.alt){ return bezier(S.ease, p); }
+    var q = p*2, it = Math.min(Math.floor(q),1), l = q - Math.floor(q);
+    if(q >= 2){ it = 1; l = 1; }
+    return it===0 ? bezier(S.ease,l) : 1 - bezier(S.ease,l);
+  }
+  function cycleSecondes(){ return S.alt ? S.dur*2 : S.dur; }
+  function utiliseAngle(){ return S.type==="linear" || S.type==="conic"; }
+  function animeVraiment(){
+    if(S.anim==="none"){ return false; }
+    if(S.anim==="rotation" && !utiliseAngle()){ return false; }
+    return true;
+  }
+
+  // Matrice hue-rotate de la spécification Filter Effects, appliquée aux couleurs.
+  function tourner(hex, deg){
+    if(!deg){ return hex; }
+    var a = deg*Math.PI/180, co = Math.cos(a), si = Math.sin(a), c = hex2rgb(hex);
+    var r=c[0], g=c[1], b=c[2];
+    return rgb2hex(
+      (0.213+co*0.787-si*0.213)*r + (0.715-co*0.715-si*0.715)*g + (0.072-co*0.072+si*0.928)*b,
+      (0.213-co*0.213+si*0.143)*r + (0.715+co*0.285+si*0.140)*g + (0.072-co*0.072-si*0.283)*b,
+      (0.213-co*0.213-si*0.787)*r + (0.715-co*0.715+si*0.715)*g + (0.072+co*0.928+si*0.072)*b
+    );
+  }
+  // Dérive déterministe : chaque tache part dans sa direction, sans tirage au rendu.
+  function derive(i){
+    return [Math.round(Math.cos(i*2.399)*54), Math.round(Math.sin(i*1.703)*44)];
+  }
+  function boite(v, W, H){
+    if(S.anim==="flux" && !isMesh()){
+      return { x:-(3*W-W)*v, y:-(3*H-H)*0.5, w:3*W, h:3*H };
+    }
+    if(S.anim==="pulsation"){
+      var e = isMesh() ? lerp(1,1.45,v) : lerp(1.2,2.6,v);
+      return { x:(W-W*e)/2, y:(H-H*e)/2, w:W*e, h:H*e };
+    }
+    return { x:0, y:0, w:W, h:H };
+  }
+
+  function dessiner(ctx, W, H, v){
+    v = v || 0;
+    var b = boite(v, W, H), i;
+    var hr = S.anim==="spectre" ? 360*v : 0;
+    var ang = (S.anim==="rotation" && utiliseAngle()) ? S.angle + 360*v : S.angle;
+
     if(isMesh()){
-      ctx.fillStyle = S.base; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = tourner(S.base, hr);
+      ctx.fillRect(0,0,W,H);
       // Ordre inverse : la première tache est celle du dessus, donc peinte en dernier.
       for(i=S.blobs.length-1;i>=0;i--){
-        var b = S.blobs[i];
-        var cx = b.x/100*W, cy = b.y/100*H, rx = b.r/100*W, ry = b.r/100*H;
+        var bl = S.blobs[i], c = tourner(bl.c, hr);
+        var cx = b.x + bl.x/100*b.w, cy = b.y + bl.y/100*b.h;
+        var rx = bl.r/100*b.w, ry = bl.r/100*b.h;
+        if(S.anim==="flux"){ var d = derive(i); cx += d[0]*v; cy += d[1]*v; }
         if(rx<=0 || ry<=0){ continue; }
         var k = ry/rx;
         ctx.save(); ctx.translate(cx,cy); ctx.scale(1,k);
         var g = ctx.createRadialGradient(0,0,0,0,0,rx);
-        g.addColorStop(0, b.c);
-        g.addColorStop(clamp(S.soft*0.45/100,0,1), rgba(b.c,.55));
-        g.addColorStop(clamp(S.soft/100,0,1), rgba(b.c,0));
+        g.addColorStop(0, c);
+        g.addColorStop(clamp(S.soft*0.45/100,0,1), rgba(c,.55));
+        g.addColorStop(clamp(S.soft/100,0,1), rgba(c,0));
         ctx.fillStyle = g;
         ctx.fillRect(-cx-W, (-cy-H)/k, W*3, (H*3)/k);
         ctx.restore();
       }
       return;
     }
+
     var st = sorted();
-    function ajouter(g){ st.forEach(function(s){ g.addColorStop(clamp(s.p/100,0,1), s.c); }); }
+    function ajouter(g){ st.forEach(function(s){ g.addColorStop(clamp(s.p/100,0,1), tourner(s.c, hr)); }); }
+    var cx0 = b.x + S.px/100*b.w, cy0 = b.y + S.py/100*b.h;
 
     if(S.type==="linear"){
-      var a = S.angle*Math.PI/180, dx = Math.sin(a), dy = -Math.cos(a);
-      var L = Math.abs(W*dx) + Math.abs(H*dy);
-      var g1 = ctx.createLinearGradient(W/2-dx*L/2, H/2-dy*L/2, W/2+dx*L/2, H/2+dy*L/2);
+      var a = ang*Math.PI/180, dx = Math.sin(a), dy = -Math.cos(a);
+      var L = Math.abs(b.w*dx) + Math.abs(b.h*dy);
+      var mx0 = b.x + b.w/2, my0 = b.y + b.h/2;
+      var g1 = ctx.createLinearGradient(mx0-dx*L/2, my0-dy*L/2, mx0+dx*L/2, my0+dy*L/2);
       ajouter(g1); ctx.fillStyle = g1; ctx.fillRect(0,0,W,H); return;
     }
     if(S.type==="radial"){
-      var cx2 = S.px/100*W, cy2 = S.py/100*H;
-      var mx = Math.max(cx2, W-cx2), my = Math.max(cy2, H-cy2);
+      var mx = Math.max(cx0-b.x, b.x+b.w-cx0), my = Math.max(cy0-b.y, b.y+b.h-cy0);
       if(S.shape==="circle"){
         var r = Math.sqrt(mx*mx+my*my);
-        var g2 = ctx.createRadialGradient(cx2,cy2,0,cx2,cy2,r);
+        var g2 = ctx.createRadialGradient(cx0,cy0,0,cx0,cy0,r);
         ajouter(g2); ctx.fillStyle = g2; ctx.fillRect(0,0,W,H);
       } else {
         var rx2 = mx*Math.SQRT2, ry2 = my*Math.SQRT2, k2 = ry2/rx2;
-        ctx.save(); ctx.translate(cx2,cy2); ctx.scale(1,k2);
+        ctx.save(); ctx.translate(cx0,cy0); ctx.scale(1,k2);
         var g3 = ctx.createRadialGradient(0,0,0,0,0,rx2);
         ajouter(g3); ctx.fillStyle = g3;
-        ctx.fillRect(-cx2-W, (-cy2-H)/k2, W*3, (H*3)/k2); ctx.restore();
+        ctx.fillRect(-cx0-W, (-cy0-H)/k2, W*3, (H*3)/k2); ctx.restore();
       }
       return;
     }
     if(typeof ctx.createConicGradient !== "function"){
       ctx.fillStyle = st[0].c; ctx.fillRect(0,0,W,H); return;
     }
-    var g4 = ctx.createConicGradient((S.angle-90)*Math.PI/180, S.px/100*W, S.py/100*H);
+    var g4 = ctx.createConicGradient((ang-90)*Math.PI/180, cx0, cy0);
     ajouter(g4); ctx.fillStyle = g4; ctx.fillRect(0,0,W,H);
   }
 
@@ -456,12 +561,46 @@
     $("soft").value = S.soft; $("soft-n").value = S.soft;
     $("base").value = S.base; $("base-hex").value = S.base;
 
-    var cv = $("apercu");
-    dessiner(cv.getContext("2d"), cv.width, cv.height);
+    $("reg-anim").style.display = (S.anim==="none") ? "none" : "";
+    $("mouvement").value = S.anim;
+    $("duree").value = S.dur; $("duree-n").value = S.dur;
+    $("courbe").value = S.ease;
+    $("aller").checked = S.alt;
+    $("note-anim").textContent = noteAnim();
+    $("video").disabled = enregistre || !animeVraiment();
+
+    if(!animeVraiment()){
+      var cv = $("apercu");
+      dessiner(cv.getContext("2d"), cv.width, cv.height, 0);
+    }
 
     rendreCouleurs();
     rendreContraste();
   }
+
+  function noteAnim(){
+    if(S.anim==="rotation" && !utiliseAngle()){
+      return isMesh()
+        ? "La rotation ne s'applique pas à une maille : essayez Flux ou Pulsation."
+        : "La rotation ne s'applique pas à un radial : choisissez linéaire ou conique.";
+    }
+    if(S.anim==="none"){ return "Sans mouvement, la vidéo n'a rien à enregistrer."; }
+    return "Vidéo : une boucle complète de " + (Math.round(cycleSecondes()*10)/10).toString().replace(".",",") + " s.";
+  }
+
+  // L'aperçu rejoue la boucle en continu, pour juger le mouvement avant d'enregistrer.
+  var debutBoucle = null;
+  (function boucler(){
+    if(animeVraiment() && !enregistre){
+      var cv = $("apercu"), t = performance.now();
+      if(debutBoucle === null){ debutBoucle = t; }
+      var p = ((t - debutBoucle)/1000 / cycleSecondes()) % 1;
+      dessiner(cv.getContext("2d"), cv.width, cv.height, phase(p));
+    } else {
+      debutBoucle = null;
+    }
+    requestAnimationFrame(boucler);
+  })();
 
   /* ---------- réglages ---------- */
   document.querySelectorAll("[data-type]").forEach(function(b){
@@ -483,6 +622,19 @@
   $("base-hex").addEventListener("change", function(e){
     if(isHex(e.target.value)){ S.base = normHex(e.target.value); rendre(); } else { e.target.value = S.base; }
   });
+
+  $("mouvement").addEventListener("change", function(e){
+    S.anim = e.target.value;
+    // Rotation et spectre bouclent déjà sur eux-mêmes : régulier et sans retour.
+    if(S.anim==="rotation" || S.anim==="spectre"){ S.ease = "linear"; S.alt = false; }
+    else { S.alt = true; }
+    rendre();
+  });
+  function poserDuree(v){ S.dur = clamp(Math.round(v*2)/2, 1, 40); rendre(); }
+  $("duree").addEventListener("input", function(e){ poserDuree(+e.target.value); });
+  $("duree-n").addEventListener("input", function(e){ poserDuree(+e.target.value || 1); });
+  $("courbe").addEventListener("change", function(e){ S.ease = e.target.value; rendre(); });
+  $("aller").addEventListener("change", function(e){ S.alt = e.target.checked; rendre(); });
 
   $("ajouter").addEventListener("click", function(){
     if(isMesh()){
@@ -568,6 +720,88 @@
       stops:S.stops, base:S.base, soft:S.soft, blobs:S.blobs
     };
   }
+
+  /* ---------- vidéo ---------- */
+  // MP4 d'abord : il se lit partout. WebM en repli — Figma accepte les deux.
+  var TYPES_VIDEO = [
+    ["video/mp4;codecs=avc1.42E01E","mp4"], ["video/mp4","mp4"],
+    ["video/webm;codecs=vp9","webm"], ["video/webm;codecs=vp8","webm"], ["video/webm","webm"]
+  ];
+  function formatVideo(){
+    if(typeof window.MediaRecorder === "undefined" || !MediaRecorder.isTypeSupported){ return null; }
+    for(var i=0;i<TYPES_VIDEO.length;i++){
+      try { if(MediaRecorder.isTypeSupported(TYPES_VIDEO[i][0])){ return TYPES_VIDEO[i]; } }
+      catch(e){ /* format inconnu */ }
+    }
+    return null;
+  }
+  function dimsVideo(){
+    var W = clamp(parseInt($("larg").value,10)||1200, 1, 4000);
+    var H = clamp(parseInt($("haut").value,10)||800, 1, 4000);
+    var f = Math.max(W,H) > 1920 ? 1920/Math.max(W,H) : 1;
+    return [Math.round(W*f/2)*2, Math.round(H*f/2)*2];
+  }
+
+  function enregistrerVideo(){
+    if(enregistre || !animeVraiment()){ return; }
+    var duree = cycleSecondes();
+    if(duree > 60){ dire("Boucle de " + Math.round(duree) + " s : réduisez la durée.", false); return; }
+
+    var fmt = formatVideo();
+    if(!fmt){ dire("Ce navigateur ne sait pas enregistrer de vidéo.", false); return; }
+
+    var d = dimsVideo(), W = d[0], H = d[1];
+    var cv = document.createElement("canvas");
+    cv.width = W; cv.height = H;
+    var ctx = cv.getContext("2d");
+    dessiner(ctx, W, H, phase(0));
+
+    var flux, rec;
+    var debit = clamp(Math.floor(60*1024*1024*8/duree), 1500000, W*H > 1280*720 ? 12000000 : 8000000);
+    try {
+      flux = cv.captureStream(30);
+      rec = new MediaRecorder(flux, { mimeType:fmt[0], videoBitsPerSecond:debit });
+    } catch(e){ dire("Enregistrement refusé : " + e.message, false); return; }
+
+    var morceaux = [], bouton = $("video");
+    enregistre = true;
+    bouton.disabled = true;
+
+    rec.ondataavailable = function(e){ if(e.data && e.data.size){ morceaux.push(e.data); } };
+    rec.onstop = function(){
+      flux.getTracks().forEach(function(t){ t.stop(); });
+      bouton.textContent = "Envoi vers Figma…";
+      var blob = new Blob(morceaux, { type:fmt[0] });
+      // Conservé le temps que Figma réponde : si le remplissage vidéo est refusé
+      // (plan sans la vidéo, version trop ancienne), on propose le fichier.
+      dernierBlob = blob;
+      dernierNom = "prisme-" + S.type + "-" + W + "x" + H + "." + fmt[1];
+      blob.arrayBuffer().then(function(buf){
+        parent.postMessage({ pluginMessage:{
+          type:"video", octets:new Uint8Array(buf), largeur:W, hauteur:H, extension:fmt[1]
+        }}, "*");
+      }, function(){
+        enregistre = false; bouton.textContent = "Créer une vidéo";
+        dire("Lecture du fichier vidéo impossible.", false);
+        rendre();
+      });
+    };
+
+    rec.start();
+    var t0 = performance.now();
+    (function image(){
+      var p = (performance.now()-t0)/1000/duree;
+      if(p >= 1){
+        dessiner(ctx, W, H, phase(1));
+        // Un court délai laisse l'encodeur avaler la dernière image.
+        setTimeout(function(){ if(rec.state !== "inactive"){ rec.stop(); } }, 150);
+        return;
+      }
+      dessiner(ctx, W, H, phase(p));
+      bouton.textContent = "Enregistrement… " + Math.round(p*100) + " %";
+      requestAnimationFrame(image);
+    })();
+  }
   function dire(msg, ok){
     var e = $("etat");
     e.textContent = msg;
@@ -580,6 +814,19 @@
       hauteur: clamp(parseInt($("haut").value,10)||800, 1, 4000)
     }}, "*");
   });
+  // Secours quand Figma n'accepte pas le remplissage vidéo : on rend le fichier.
+  function proposerFichier(){
+    try {
+      var url = URL.createObjectURL(dernierBlob);
+      var a = document.createElement("a");
+      a.href = url; a.download = dernierNom;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 8000);
+      return true;
+    } catch(e){ return false; }
+  }
+
+  $("video").addEventListener("click", enregistrerVideo);
   $("appliquer").addEventListener("click", function(){
     parent.postMessage({ pluginMessage:{ type:"appliquer", etat:etatEnvoye() } }, "*");
   });
@@ -587,7 +834,15 @@
   window.onmessage = function(e){
     var m = e.data && e.data.pluginMessage;
     if(!m){ return; }
-    if(m.type === "retour"){ dire(m.message, m.ok); }
+    if(m.type === "retour"){
+      var texte = m.message;
+      if(m.contexte === "video" && !m.ok && dernierBlob){
+        texte += proposerFichier() ? " — vidéo proposée en téléchargement." : "";
+      }
+      dire(texte, m.ok);
+      if(enregistre){ enregistre = false; $("video").textContent = "Créer une vidéo"; rendre(); }
+      if(m.contexte === "video" && m.ok){ dernierBlob = null; }
+    }
     if(m.type === "selection"){
       $("appliquer").disabled = m.nombre === 0;
       $("appliquer").textContent = m.nombre > 1

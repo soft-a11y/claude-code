@@ -183,11 +183,53 @@ function appliquer(etat) {
 }
 
 /* ---------------------------------------------------------------
+   Vidéo
+
+   L'interface encode l'animation avec MediaRecorder puis envoie les octets.
+   Figma sait afficher une vidéo comme remplissage : inutile de passer par un
+   téléchargement, l'animation se pose directement sur le canevas.
+   --------------------------------------------------------------- */
+async function poserVideo(msg) {
+  if (typeof figma.createVideoAsync !== 'function') {
+    return { ok: false, message: "Cette version de Figma ne gère pas les remplissages vidéo." };
+  }
+  var octets = msg.octets instanceof Uint8Array ? msg.octets : new Uint8Array(msg.octets);
+  if (!octets.length) { return { ok: false, message: 'Vidéo vide.' }; }
+
+  var video;
+  try {
+    video = await figma.createVideoAsync(octets);
+  } catch (e) {
+    // Le plus souvent : plan sans la vidéo, fichier trop lourd, ou format refusé.
+    return { ok: false, message: 'Figma a refusé la vidéo — ' + e.message };
+  }
+
+  var r = figma.createRectangle();
+  r.name = 'Dégradé animé Prisme';
+  r.resize(msg.largeur, msg.hauteur);
+  placer(r, msg.largeur, msg.hauteur);
+  r.fills = [{ type: 'VIDEO', videoHash: video.hash, scaleMode: 'FILL' }];
+
+  figma.currentPage.selection = [r];
+  figma.viewport.scrollAndZoomIntoView([r]);
+  var poids = Math.round(octets.length / 1024);
+  return {
+    ok: true,
+    message: 'Vidéo posée — ' + msg.largeur + ' × ' + msg.hauteur
+      + ' · ' + (poids > 1024 ? (poids / 1024).toFixed(1) + ' Mo' : poids + ' Ko')
+  };
+}
+
+/* ---------------------------------------------------------------
    Messages venus de l'interface
    --------------------------------------------------------------- */
-figma.ui.onmessage = function (msg) {
+figma.ui.onmessage = async function (msg) {
   try {
-    if (msg.type === 'creer') {
+    if (msg.type === 'video') {
+      var v = await poserVideo(msg);
+      // contexte : l'interface propose le téléchargement si Figma refuse la vidéo.
+      figma.ui.postMessage({ type: 'retour', ok: v.ok, message: v.message, contexte: 'video' });
+    } else if (msg.type === 'creer') {
       var node = creer(msg.etat, msg.largeur, msg.hauteur);
       figma.currentPage.selection = [node];
       figma.viewport.scrollAndZoomIntoView([node]);

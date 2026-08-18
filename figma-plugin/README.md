@@ -23,6 +23,9 @@ Le plugin ne fait aucun appel réseau (`networkAccess: none`).
 - **Appliquer à la sélection** — remplit les calques sélectionnés. Une maille
   demande un frame, puisqu'elle a besoin d'enfants.
 - **Contraste WCAG** — pire ratio du texte blanc et du texte noir sur le dégradé.
+- **Animation et vidéo** — cinq mouvements (flux, rotation, pulsation, spectre, ou
+  fixe), rejoués en boucle dans l'aperçu. **Créer une vidéo** encode une boucle
+  complète et la pose sur le canevas comme remplissage vidéo.
 
 ## Comment la maille est construite
 
@@ -34,6 +37,18 @@ le premier calque CSS est celui du dessus.
 
 Une nouvelle application sur un frame supprime d'abord les taches précédentes
 (reconnues à leur nom `Tache #…`) pour ne pas les empiler.
+
+## La vidéo
+
+Figma ne sait pas animer un dégradé, mais il sait afficher une vidéo en
+remplissage. Le plugin redessine donc l'animation image par image sur un canevas,
+l'encode avec `MediaRecorder` (MP4, WebM en repli), puis passe les octets à
+`figma.createVideoAsync`. La vidéo couvre exactement un cycle, donc elle boucle
+sans à-coup. L'enregistrement se fait en temps réel : une boucle de 20 s prend 20 s.
+
+Le remplissage vidéo demande un plan payant. Si Figma refuse le fichier — plan
+sans la vidéo, version trop ancienne, fichier trop lourd — le plugin le propose
+en téléchargement plutôt que de perdre l'enregistrement.
 
 ## Géométrie des dégradés — état de la vérification
 
@@ -50,3 +65,12 @@ dans un vrai fichier Figma plutôt que supposées :
 
 Sur un cadre carré le conique est exact. Sur un cadre très allongé, les angles
 intermédiaires peuvent être légèrement décalés ; le point de départ, lui, est bon.
+
+Côté vidéo, l'interface est vérifiée de bout en bout hors de Figma : l'aperçu
+s'anime, l'encodage produit bien un MP4, et le message parvient au plugin avec
+les octets attendus. L'appel `figma.createVideoAsync` lui-même n'a pas pu être
+vérifié : le pont MCP utilisé pendant le développement le bloque explicitement
+(« not a supported API »), au même titre que `createImageAsync`. C'est une
+restriction de ce pont, pas de Figma — mais le chemin de secours par
+téléchargement existe précisément pour couvrir le cas où l'appel échouerait aussi
+dans un vrai plugin.
