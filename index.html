@@ -1918,6 +1918,9 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
      téléchargement
      ========================================================= */
   var dlNamespace; // résolu une seule fois
+  // Un hôte fournit window.claude ; ouverte en local ou hébergée, la page ne l'a pas.
+  function sousTutelle(){ return typeof window.claude !== "undefined" && !!window.claude; }
+
   function capaDownloads(){
     if(dlNamespace !== undefined){ return Promise.resolve(dlNamespace); }
     if(typeof window.claude === "undefined" || !window.claude || typeof window.claude.use !== "function"){
@@ -1950,7 +1953,11 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
         a.href = url; a.download = nom;
         document.body.appendChild(a); a.click(); a.remove();
         setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
-        toast("Téléchargement lancé — " + nom);
+        // Dans l'aperçu d'un artifact ce lien est inerte : annoncer un
+        // téléchargement réussi serait faux. On dit ce qui marche vraiment.
+        toast(sousTutelle()
+          ? "Cet aperçu bloque les téléchargements. Clic droit sur la vidéo puis « Enregistrer la vidéo sous… »."
+          : "Téléchargement lancé — " + nom);
         return;
       }
       return ns.save({ filename:nom, data:data }).then(function(){
@@ -2057,7 +2064,8 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     }
 
     var flux, rec;
-    var debit = clamp(Math.floor(14*1024*1024*8/duree), 1500000, W*H > 1280*720 ? 12000000 : 8000000);
+    // La limite de l'hôte est de 16 Mio : on vise 11 pour garder de la marge.
+    var debit = clamp(Math.floor(11*1024*1024*8/duree), 1500000, W*H > 1280*720 ? 12000000 : 8000000);
     try {
       flux = cv.captureStream(30);
       rec = new MediaRecorder(flux, { mimeType:fmt[0], videoBitsPerSecond:debit });
@@ -2131,6 +2139,14 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     $("video-garder").textContent = "Télécharger le " + nom.split(".").pop().toUpperCase();
     $("video-bloc").hidden = false;
     toast("Vidéo prête — regardez la boucle avant de télécharger.");
+
+    // Si l'hôte ne sait pas enregistrer de fichier, le lecteur lui-même le peut.
+    capaDownloads().then(function(ns){
+      if(!ns && sousTutelle()){
+        $("video-info").textContent += " — cet aperçu bloque les téléchargements : "
+          + "clic droit sur la vidéo puis « Enregistrer la vidéo sous… ».";
+      }
+    });
   }
 
   $("video-garder").addEventListener("click", function(){
