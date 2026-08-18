@@ -79,7 +79,7 @@ button,input,select{font:inherit;color:inherit}
   border-radius:4px;
 }
 
-.wrap{max-width:1240px;margin:0 auto;padding:var(--sp) var(--sp) 3rem}
+.wrap{max-width:1480px;margin:0 auto;padding:var(--sp) var(--sp) 3rem}
 
 /* ---------- en-tête ---------- */
 .masthead{
@@ -104,6 +104,12 @@ button,input,select{font:inherit;color:inherit}
 
 .stage{display:flex;flex-direction:column;gap:var(--sp);min-width:0}
 .rail{display:flex;flex-direction:column;gap:.9rem;min-width:0}
+/* Au-delà de 1300px le rail se replie sur deux colonnes : il devenait bien plus haut que la scène. */
+@media (min-width:1300px){
+  .workbench{grid-template-columns:minmax(0,1.15fr) minmax(560px,1fr)}
+  .rail{display:block;column-count:2;column-gap:.9rem}
+  .rail > .card{break-inside:avoid;margin-bottom:.9rem}
+}
 
 .card{
   background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
@@ -166,8 +172,8 @@ button,input,select{font:inherit;color:inherit}
 
 .seg{display:flex;gap:4px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:3px}
 .seg button{
-  flex:1;padding:.4rem .3rem;border:0;background:transparent;border-radius:6px;cursor:pointer;
-  font-size:.78rem;color:var(--ink-2);transition:background .15s ease,color .15s ease;
+  flex:1;padding:.4rem .2rem;border:0;background:transparent;border-radius:6px;cursor:pointer;
+  font-size:.76rem;color:var(--ink-2);transition:background .15s ease,color .15s ease;
 }
 .seg button:hover{color:var(--ink)}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:500}
@@ -211,6 +217,50 @@ input[type=color]::-moz-color-swatch{border:0;border-radius:5px}
 .btn-icon:hover{color:var(--bad);border-color:var(--bad)}
 .btn-row{display:flex;gap:.4rem;margin-top:.7rem}
 .btn-row .btn{flex:1}
+.btn-primary{
+  width:100%;margin-top:.75rem;padding:.55rem;font-weight:500;
+  background:var(--accent);color:var(--accent-ink);border-color:var(--accent);
+}
+.btn-primary:hover{background:var(--accent);border-color:var(--accent);filter:brightness(1.1)}
+.gen-out{
+  font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.68rem;color:var(--ink-2);
+  margin:.6rem 0 0;line-height:1.55;
+}
+.gen-out b{color:var(--ink);font-weight:500}
+
+/* poignées des taches de la maille */
+.blobs{position:absolute;inset:0}
+.blob-h{
+  position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;padding:0;
+  border-radius:50%;border:2px solid rgba(255,255,255,.9);background:transparent;cursor:grab;
+  box-shadow:0 0 0 1px rgba(0,0,0,.5), inset 0 0 0 1px rgba(0,0,0,.35);
+}
+.blob-h::after{content:"";position:absolute;inset:5px;border-radius:50%;background:currentColor}
+.blob-h[aria-selected="true"]{width:34px;height:34px;margin:-17px 0 0 -17px}
+.blob-h:active{cursor:grabbing}
+.stop-row .siz{width:58px;flex:none}
+
+/* mémoire */
+.mem-list{list-style:none;margin:.7rem 0 0;padding:0;display:flex;flex-direction:column;gap:.35rem}
+.mem-item{display:flex;align-items:center;gap:.45rem}
+.mem-item .sw{width:36px;height:26px;border-radius:6px;border:1px solid var(--line-strong);flex:none}
+.mem-item .nm{
+  flex:1;min-width:0;font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  background:none;border:0;text-align:left;cursor:pointer;padding:.2rem 0;color:var(--ink);
+}
+.mem-item .nm:hover{color:var(--accent)}
+.mem-item .nm span{display:block;font-size:.66rem;color:var(--ink-2)}
+#mem-name{text-transform:none;font-family:inherit;font-size:.8rem}
+.btn-primary{
+  width:100%;margin-top:.75rem;padding:.55rem;font-weight:500;
+  background:var(--accent);color:var(--accent-ink);border-color:var(--accent);
+}
+.btn-primary:hover{background:var(--accent);border-color:var(--accent);filter:brightness(1.1)}
+.gen-out{
+  font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.68rem;color:var(--ink-2);
+  margin:.6rem 0 0;line-height:1.5;
+}
+.gen-out b{color:var(--ink);font-weight:500}
 
 .switch{display:flex;align-items:center;gap:.55rem;cursor:pointer;font-size:.82rem}
 .switch input{width:16px;height:16px;accent-color:var(--accent);margin:0;flex:none}
@@ -282,13 +332,14 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     <div class="stage">
       <div class="canvas">
         <div id="paint"></div>
+        <div class="blobs" id="blobs" hidden></div>
         <div class="legib" id="legib" aria-hidden="true">
           <p class="lt">Texte blanc sur le dégradé</p>
           <p class="dk">Texte noir sur le dégradé</p>
         </div>
       </div>
 
-      <section class="card track-shell" aria-labelledby="t-track">
+      <section class="card track-shell" id="card-track" aria-labelledby="t-track">
         <div class="panel-head">
           <h2 class="panel-title" id="t-track">Arrêts de couleur</h2>
           <span class="panel-note">Glissez, ou flèches ← → au clavier</span>
@@ -318,6 +369,7 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
             <button type="button" data-type="linear" aria-pressed="true">Linéaire</button>
             <button type="button" data-type="radial" aria-pressed="false">Radial</button>
             <button type="button" data-type="conic" aria-pressed="false">Conique</button>
+            <button type="button" data-type="mesh" aria-pressed="false">Maille</button>
           </div>
         </div>
 
@@ -331,6 +383,16 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
           <div class="seg" role="group" aria-labelledby="l-shape">
             <button type="button" data-shape="circle" aria-pressed="true">Cercle</button>
             <button type="button" data-shape="ellipse" aria-pressed="false">Ellipse</button>
+          </div>
+        </div>
+
+        <div class="field" id="f-mesh" hidden>
+          <label for="soft">Douceur du fondu <span class="val" id="v-soft">72 %</span></label>
+          <input type="range" id="soft" min="35" max="98" step="1" value="72">
+          <span class="lbl" style="margin-top:.55rem">Couleur de fond</span>
+          <div class="stop-row">
+            <input type="color" id="base" value="#04191E" aria-label="Couleur de fond de la maille">
+            <input type="text" id="base-hex" class="hex" value="#04191E" aria-label="Code hexadécimal du fond">
           </div>
         </div>
 
@@ -349,8 +411,8 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
         </div>
         <div id="stops"></div>
         <div class="btn-row">
-          <button class="btn" type="button" id="add">Ajouter un arrêt</button>
-          <button class="btn" type="button" id="shuffle">Mélanger</button>
+          <button class="btn" type="button" id="add">Ajouter</button>
+          <button class="btn" type="button" id="shuffle">Recolorer</button>
         </div>
       </section>
 
@@ -411,6 +473,54 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
         <p class="hint" style="margin-top:.6rem">Pire contraste mesuré sur l'ensemble du dégradé. AA exige 4,5 pour le texte courant, 3 pour le grand texte.</p>
       </section>
 
+      <section class="card panel" aria-labelledby="t-gen">
+        <div class="panel-head">
+          <h2 class="panel-title" id="t-gen">Génération</h2>
+          <span class="panel-note" id="fam-count"></span>
+        </div>
+        <div class="field">
+          <label for="family">Famille</label>
+          <select id="family"></select>
+        </div>
+        <label class="switch"><input type="checkbox" id="gen-anim" checked> Proposer aussi une animation</label>
+        <button class="btn btn-primary" type="button" id="generate">Générer un dégradé</button>
+        <p class="gen-out" id="gen-out">Chaque famille a sa propre structure : nombre d'arrêts, espacement, type et coupes nettes changent de l'une à l'autre.</p>
+      </section>
+
+      <section class="card panel" aria-labelledby="t-exp">
+        <div class="panel-head">
+          <h2 class="panel-title" id="t-exp">Téléchargement</h2>
+        </div>
+        <div class="field">
+          <label for="size">Dimensions de l'image</label>
+          <select id="size">
+            <option value="1920x1080">1920 × 1080 — paysage</option>
+            <option value="1080x1920">1080 × 1920 — portrait</option>
+            <option value="1080x1080">1080 × 1080 — carré</option>
+            <option value="2560x1440">2560 × 1440 — grand paysage</option>
+            <option value="3840x2160">3840 × 2160 — ultra haute définition</option>
+          </select>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="dl-png" type="button">Image PNG</button>
+          <button class="btn" id="dl-css" type="button">Fichier CSS</button>
+        </div>
+        <p class="hint" style="margin-top:.55rem">L'image est une capture fixe : une animation est figée sur sa première image.</p>
+      </section>
+
+      <section class="card panel" aria-labelledby="t-mem">
+        <div class="panel-head">
+          <h2 class="panel-title" id="t-mem">Mémoire</h2>
+          <span class="panel-note" id="mem-count"></span>
+        </div>
+        <div class="stop-row">
+          <input type="text" id="mem-name" placeholder="Nom du dégradé" aria-label="Nom du dégradé à enregistrer" maxlength="40">
+          <button class="btn" id="mem-save" type="button">Enregistrer</button>
+        </div>
+        <ul class="mem-list" id="mem-list"></ul>
+        <p class="hint" id="mem-note" style="margin-top:.55rem"></p>
+      </section>
+
       <section class="card panel" aria-labelledby="t-pre">
         <div class="panel-head"><h2 class="panel-title" id="t-pre">Modèles</h2></div>
         <div class="presets" id="presets"></div>
@@ -431,36 +541,40 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
 (function(){
   "use strict";
 
-  var PRESETS = [
-    {n:"Aurore",     t:"linear", a:160, s:[["#0A1E3C",0],["#12695F",46],["#8CE0A8",100]]},
-    {n:"Braise",     t:"linear", a:35,  s:[["#2B0B16",0],["#B4341C",55],["#F2B33D",100]]},
-    {n:"Marée",      t:"linear", a:200, s:[["#E8DCC2",0],["#6FBFB6",60],["#123A54",100]]},
-    {n:"Néon",       t:"conic",  a:0,   s:[["#FF3D9A",0],["#3B2ED0",34],["#22D3EE",68],["#FF3D9A",100]]},
-    {n:"Argile",     t:"radial", a:0,   s:[["#F6EFE7",0],["#D4A373",62],["#6B4423",100]]},
-    {n:"Encre",      t:"linear", a:128, s:[["#111827",0],["#374151",50],["#9CA3AF",100]]}
-  ];
-
-  var NOTES = {
-    none:      "Le dégradé reste immobile.",
-    flux:      "Le dégradé est agrandi puis déplacé : le mouvement reste très fluide.",
-    rotation:  "L'angle tourne. Sur un dégradé radial, seule la position du centre compte : choisissez linéaire ou conique.",
-    pulsation: "La taille du dégradé oscille, comme une respiration.",
-    spectre:   "Un filtre hue-rotate fait défiler toutes les teintes."
-  };
-
+  /* =========================================================
+     état
+     ========================================================= */
+  // Les taches de la maille sont listées du dessus vers le dessous :
+  // CSS peint le premier calque de background-image au-dessus des autres.
   var S = {
-    type:"linear", angle:128, px:50, py:50, shape:"circle",
+    type:"mesh", angle:128, px:50, py:50, shape:"circle",
     stops:[{c:"#0B3B6F",p:0},{c:"#1FA8A0",p:52},{c:"#F2E7C9",p:100}],
-    anim:"none", dur:12, ease:"ease-in-out", alt:true, sel:0, legib:false
+    base:"#04191E", soft:72,
+    blobs:[
+      { c:"#F2FFFB", x:6,  y:29, r:22 },
+      { c:"#7CF5D8", x:14, y:35, r:46 },
+      { c:"#18D9A0", x:30, y:48, r:80 },
+      { c:"#0E5C63", x:80, y:82, r:98 }
+    ],
+    anim:"flux", dur:22, ease:"ease-in-out", alt:true, sel:0, legib:false
   };
 
+  var MAX = 6;
+
+  /* =========================================================
+     utilitaires
+     ========================================================= */
   var $ = function(id){ return document.getElementById(id); };
   var clamp = function(v,a,b){ return Math.min(b,Math.max(a,v)); };
   var round1 = function(v){ return Math.round(v*10)/10; };
+  function rf(a,b){ return Math.random()*(b-a)+a; }
+  function ri(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+  function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+  function lerp(a,b,t){ return a+(b-a)*t; }
 
   /* ---------- couleur ---------- */
   function hex2rgb(h){
-    h = h.replace("#","");
+    h = String(h).replace("#","");
     if(h.length===3){ h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2]; }
     return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
   }
@@ -469,14 +583,20 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
       return clamp(Math.round(v),0,255).toString(16).padStart(2,"0");
     }).join("").toUpperCase();
   }
-  function isHex(v){ return /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v.trim()); }
+  function isHex(v){ return /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(v).trim()); }
   function normHex(v){
-    v = v.trim(); if(v[0] !== "#"){ v = "#" + v; }
+    v = String(v).trim(); if(v[0] !== "#"){ v = "#" + v; }
     if(v.length===4){ v = "#"+v[1]+v[1]+v[2]+v[2]+v[3]+v[3]; }
     return v.toUpperCase();
   }
+  // On fond toujours vers la même couleur en alpha 0 : passer par « transparent »
+  // ferait virer la tache au gris en cours de route.
+  function rgba(hex,a){
+    var c = hex2rgb(hex);
+    return "rgba("+c[0]+","+c[1]+","+c[2]+","+a+")";
+  }
   function hsl2hex(h,s,l){
-    h=((h%360)+360)%360; s/=100; l/=100;
+    h=((h%360)+360)%360; s=clamp(s,0,100)/100; l=clamp(l,0,100)/100;
     var c=(1-Math.abs(2*l-1))*s, x=c*(1-Math.abs((h/60)%2-1)), m=l-c/2, r=0,g=0,b=0;
     if(h<60){r=c;g=x;} else if(h<120){r=x;g=c;} else if(h<180){g=c;b=x;}
     else if(h<240){g=x;b=c;} else if(h<300){r=x;b=c;} else {r=c;b=x;}
@@ -503,61 +623,106 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     return (hi+0.05)/(lo+0.05);
   }
 
-  /* ---------- construction du CSS ---------- */
-  function sorted(){
-    return S.stops.slice().sort(function(a,b){ return a.p-b.p; });
-  }
+  /* =========================================================
+     construction du CSS
+     ========================================================= */
+  function isMesh(){ return S.type==="mesh"; }
+  function usesAngle(){ return S.type==="linear" || S.type==="conic"; }
+  function rotates(){ return S.anim==="rotation" && usesAngle(); }
+
+  function sorted(){ return S.stops.slice().sort(function(a,b){ return a.p-b.p; }); }
   function stopList(){
     return sorted().map(function(s){ return s.c.toLowerCase()+" "+round1(s.p)+"%"; }).join(", ");
   }
+
+  // Une tache = un radial-gradient qui s'éteint en alpha 0. Superposés, ils donnent la maille.
+  function meshLayers(indent){
+    return S.blobs.map(function(b){
+      var c = b.c.toLowerCase();
+      return indent + "radial-gradient("+round1(b.r)+"% "+round1(b.r)+"% at "+round1(b.x)+"% "+round1(b.y)+"%, "
+           + c + " 0%, " + rgba(b.c,.55) + " " + Math.round(S.soft*0.45) + "%, "
+           + rgba(b.c,0) + " " + Math.round(S.soft) + "%)";
+    }).join(",\n");
+  }
+
   function gradient(angleExpr){
     var st = stopList();
     if(S.type==="linear"){ return "linear-gradient("+angleExpr+", "+st+")"; }
     if(S.type==="radial"){ return "radial-gradient("+S.shape+" farthest-corner at "+S.px+"% "+S.py+"%, "+st+")"; }
     return "conic-gradient(from "+angleExpr+" at "+S.px+"% "+S.py+"%, "+st+")";
   }
-  function usesAngle(){ return S.type==="linear" || S.type==="conic"; }
-  function rotates(){ return S.anim==="rotation" && usesAngle(); }
 
-  function keyframes(){
-    var a = S.angle;
-    switch(S.anim){
-      case "rotation":  return usesAngle()
-        ? "@keyframes prisme-rotation {\n  from { --pg-angle: "+a+"deg; }\n  to   { --pg-angle: "+(a+360)+"deg; }\n}"
-        : "";
-      case "flux":      return "@keyframes prisme-flux {\n  from { background-position: 0% 50%; }\n  to   { background-position: 100% 50%; }\n}";
-      case "pulsation": return "@keyframes prisme-pulsation {\n  from { background-size: 120% 120%; }\n  to   { background-size: 260% 260%; }\n}";
-      case "spectre":   return "@keyframes prisme-spectre {\n  from { filter: hue-rotate(0deg); }\n  to   { filter: hue-rotate(360deg); }\n}";
-      default:          return "";
-    }
+  // Dérive déterministe : chaque tache part dans sa direction, sans tirage aléatoire au rendu.
+  function derive(i){
+    return [Math.round(Math.cos(i*2.399)*54), Math.round(Math.sin(i*1.703)*44)];
   }
+  function posDepart(){
+    return S.blobs.map(function(){ return "0px 0px"; }).join(", ");
+  }
+  function posArrivee(){
+    return S.blobs.map(function(b,i){
+      var d = derive(i); return d[0]+"px "+d[1]+"px";
+    }).join(", ");
+  }
+
   function animName(){
     if(S.anim==="none"){ return ""; }
     if(S.anim==="rotation" && !usesAngle()){ return ""; }
     return "prisme-"+S.anim;
   }
+
+  function keyframes(){
+    var a = S.angle;
+    switch(S.anim){
+      case "rotation":
+        return usesAngle()
+          ? "@keyframes prisme-rotation {\n  from { --pg-angle: "+a+"deg; }\n  to   { --pg-angle: "+(a+360)+"deg; }\n}"
+          : "";
+      case "flux":
+        return isMesh()
+          ? "@keyframes prisme-flux {\n  from { background-position: "+posDepart()+"; }\n  to   { background-position: "+posArrivee()+"; }\n}"
+          : "@keyframes prisme-flux {\n  from { background-position: 0% 50%; }\n  to   { background-position: 100% 50%; }\n}";
+      case "pulsation":
+        return isMesh()
+          ? "@keyframes prisme-pulsation {\n  from { background-size: 100% 100%; }\n  to   { background-size: 145% 145%; }\n}"
+          : "@keyframes prisme-pulsation {\n  from { background-size: 120% 120%; }\n  to   { background-size: 260% 260%; }\n}";
+      case "spectre":
+        return "@keyframes prisme-spectre {\n  from { filter: hue-rotate(0deg); }\n  to   { filter: hue-rotate(360deg); }\n}";
+      default:
+        return "";
+    }
+  }
+
   function bgSize(){
+    if(isMesh()){ return "100% 100%"; }
     if(S.anim==="flux"){ return "300% 300%"; }
     if(S.anim==="pulsation"){ return "120% 120%"; }
     return "100% 100%";
   }
 
   function rules(sel){
-    var name = animName();
-    var lines = [];
-    lines.push("  background-image: "+gradient(rotates() ? "var(--pg-angle)" : S.angle+"deg")+";");
-    lines.push("  background-size: "+bgSize()+";");
-    lines.push("  background-position: 50% 50%;");
-    if(rotates()){ lines.push("  --pg-angle: "+S.angle+"deg;"); }
+    var name = animName(), lines = [];
+
+    if(isMesh()){
+      lines.push("  background-color: "+S.base.toLowerCase()+";");
+      lines.push("  background-image:\n"+meshLayers("    ")+";");
+      lines.push("  background-repeat: no-repeat;");
+      lines.push("  background-size: "+bgSize()+";");
+      if(S.anim==="flux"){ lines.push("  background-position: "+posDepart()+";"); }
+    } else {
+      lines.push("  background-image: "+gradient(rotates() ? "var(--pg-angle)" : S.angle+"deg")+";");
+      lines.push("  background-size: "+bgSize()+";");
+      lines.push("  background-position: 50% 50%;");
+      if(rotates()){ lines.push("  --pg-angle: "+S.angle+"deg;"); }
+    }
     if(name){
       lines.push("  animation: "+name+" "+round1(S.dur)+"s "+S.ease+" infinite"+(S.alt?" alternate":"")+";");
     }
+
     var css = sel+" {\n"+lines.join("\n")+"\n}";
     var kf = keyframes();
     if(kf){ css += "\n\n"+kf; }
-    if(name){
-      css += "\n\n@media (prefers-reduced-motion: reduce) {\n  "+sel+" { animation: none; }\n}";
-    }
+    if(name){ css += "\n\n@media (prefers-reduced-motion: reduce) {\n  "+sel+" { animation: none; }\n}"; }
     return css;
   }
 
@@ -568,24 +733,26 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     return head + rules(".degrade");
   }
 
-  /* ---------- rendu ---------- */
-  var live = $("live"), paint = $("paint");
+  /* =========================================================
+     rendu
+     ========================================================= */
+  var live = $("live");
 
-  function paintCss(){
-    // @property est déclaré dans la feuille principale : on ne réécrit que les règles.
-    live.textContent = rules("#paint");
+  function couleurs(){
+    return isMesh()
+      ? [S.base].concat(S.blobs.map(function(b){ return b.c; }))
+      : S.stops.map(function(s){ return s.c; });
   }
 
   function renderTrack(){
+    if(isMesh()){ return; }
     var track = $("track");
     track.style.background = "linear-gradient(90deg, "+stopList()+")";
     track.innerHTML = "";
     S.stops.forEach(function(s,i){
       var b = document.createElement("button");
-      b.type = "button";
-      b.className = "thumb";
-      b.style.left = s.p+"%";
-      b.style.color = s.c;
+      b.type = "button"; b.className = "thumb";
+      b.style.left = s.p+"%"; b.style.color = s.c;
       b.setAttribute("role","slider");
       b.setAttribute("aria-label","Arrêt "+(i+1)+" — "+s.c);
       b.setAttribute("aria-valuemin","0");
@@ -598,32 +765,85 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     });
   }
 
+  function renderBlobs(){
+    var box = $("blobs");
+    box.hidden = !isMesh();
+    if(!isMesh()){ return; }
+    box.innerHTML = "";
+    S.blobs.forEach(function(b,i){
+      var h = document.createElement("button");
+      h.type = "button"; h.className = "blob-h";
+      h.style.left = b.x+"%"; h.style.top = b.y+"%"; h.style.color = b.c;
+      h.dataset.i = i;
+      h.setAttribute("aria-selected", i===S.sel ? "true":"false");
+      h.setAttribute("aria-label",
+        "Tache "+(i+1)+" — "+b.c+", position "+Math.round(b.x)+" pour cent horizontal, "
+        +Math.round(b.y)+" pour cent vertical. Flèches pour déplacer.");
+      box.appendChild(h);
+    });
+  }
+
+  function ligneCouleur(i, obj, label, extra){
+    var row = document.createElement("div");
+    row.className = "stop-row";
+
+    var col = document.createElement("input");
+    col.type = "color"; col.value = obj.c;
+    col.setAttribute("aria-label","Couleur — "+label);
+    col.addEventListener("input", function(){ obj.c = col.value.toUpperCase(); S.sel = i; render(); });
+
+    var hex = document.createElement("input");
+    hex.type = "text"; hex.className = "hex"; hex.value = obj.c;
+    hex.setAttribute("aria-label","Code hexadécimal — "+label);
+    hex.addEventListener("change", function(){
+      if(isHex(hex.value)){ obj.c = normHex(hex.value); render(); }
+      else { hex.value = obj.c; toast("Code couleur invalide — utilisez #A1B2C3"); }
+    });
+
+    row.append(col, hex);
+    extra.forEach(function(el){ row.appendChild(el); });
+    return row;
+  }
+
   function renderStops(){
     var box = $("stops");
     box.innerHTML = "";
-    S.stops.forEach(function(s,i){
-      var row = document.createElement("div");
-      row.className = "stop-row";
 
-      var col = document.createElement("input");
-      col.type = "color"; col.value = s.c;
-      col.setAttribute("aria-label","Couleur de l'arrêt "+(i+1));
-      col.addEventListener("input", function(){ S.stops[i].c = col.value.toUpperCase(); S.sel = i; render(); });
+    if(isMesh()){
+      $("t-col").textContent = "Taches";
+      S.blobs.forEach(function(b,i){
+        var taille = document.createElement("input");
+        taille.type = "number"; taille.className = "siz";
+        taille.min = 5; taille.max = 160; taille.step = 1; taille.value = Math.round(b.r);
+        taille.setAttribute("aria-label","Taille de la tache "+(i+1)+" en pourcentage");
+        taille.addEventListener("input", function(){
+          b.r = clamp(parseFloat(taille.value)||5, 5, 160); S.sel = i; render();
+        });
 
-      var hex = document.createElement("input");
-      hex.type = "text"; hex.className = "hex"; hex.value = s.c;
-      hex.setAttribute("aria-label","Code hexadécimal de l'arrêt "+(i+1));
-      hex.addEventListener("change", function(){
-        if(isHex(hex.value)){ S.stops[i].c = normHex(hex.value); render(); }
-        else { hex.value = S.stops[i].c; toast("Code couleur invalide — utilisez #A1B2C3"); }
+        var del = document.createElement("button");
+        del.type = "button"; del.className = "btn btn-icon"; del.textContent = "×";
+        del.setAttribute("aria-label","Supprimer la tache "+(i+1));
+        del.disabled = S.blobs.length <= 1;
+        del.addEventListener("click", function(){
+          if(S.blobs.length<=1){ return; }
+          S.blobs.splice(i,1); S.sel = 0; render();
+        });
+
+        box.appendChild(ligneCouleur(i, b, "tache "+(i+1), [taille, del]));
       });
+      $("stopcount").textContent = S.blobs.length+" tache"+(S.blobs.length>1?"s":"");
+      $("add").disabled = S.blobs.length >= MAX;
+      return;
+    }
 
+    $("t-col").textContent = "Couleurs";
+    S.stops.forEach(function(st,i){
       var pos = document.createElement("input");
-      pos.type = "number"; pos.className = "pos"; pos.min = 0; pos.max = 100; pos.step = 1;
-      pos.value = Math.round(s.p);
+      pos.type = "number"; pos.className = "pos";
+      pos.min = 0; pos.max = 100; pos.step = 1; pos.value = Math.round(st.p);
       pos.setAttribute("aria-label","Position de l'arrêt "+(i+1)+" en pourcentage");
       pos.addEventListener("input", function(){
-        S.stops[i].p = clamp(parseFloat(pos.value)||0,0,100); S.sel = i; render();
+        st.p = clamp(parseFloat(pos.value)||0,0,100); S.sel = i; render();
       });
 
       var del = document.createElement("button");
@@ -635,11 +855,10 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
         S.stops.splice(i,1); S.sel = 0; render();
       });
 
-      row.append(col,hex,pos,del);
-      box.appendChild(row);
+      box.appendChild(ligneCouleur(i, st, "arrêt "+(i+1), [pos, del]));
     });
     $("stopcount").textContent = S.stops.length+" arrêt"+(S.stops.length>1?"s":"");
-    $("add").disabled = S.stops.length >= 6;
+    $("add").disabled = S.stops.length >= MAX;
   }
 
   function badge(el,r){
@@ -650,9 +869,9 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
   }
   function renderContrast(){
     var rl = Infinity, rd = Infinity;
-    S.stops.forEach(function(s){
-      rl = Math.min(rl, ratio(s.c,"#FFFFFF"));
-      rd = Math.min(rd, ratio(s.c,"#111111"));
+    couleurs().forEach(function(c){
+      rl = Math.min(rl, ratio(c,"#FFFFFF"));
+      rd = Math.min(rd, ratio(c,"#111111"));
     });
     $("r-light").textContent = rl.toFixed(2).replace(".",",");
     $("r-dark").textContent  = rd.toFixed(2).replace(".",",");
@@ -661,17 +880,35 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
   }
 
   function renderAccent(){
-    // L'interface se teinte avec l'arrêt le plus saturé du dégradé.
-    var best = S.stops[0].c, bestS = -1;
-    S.stops.forEach(function(s){
-      var hsl = rgb2hsl.apply(null, hex2rgb(s.c));
-      if(hsl[1] > bestS){ bestS = hsl[1]; best = s.c; }
+    // L'interface se teinte avec la couleur la plus saturée du dégradé en cours.
+    var liste = isMesh() ? S.blobs.map(function(b){ return b.c; }) : S.stops.map(function(s){ return s.c; });
+    var best = liste[0], bestS = -1;
+    liste.forEach(function(c){
+      var hsl = rgb2hsl.apply(null, hex2rgb(c));
+      if(hsl[1] > bestS){ bestS = hsl[1]; best = c; }
     });
     var h = rgb2hsl.apply(null, hex2rgb(best));
     var sat = clamp(h[1], 28, 82);
     var root = document.documentElement.style;
     root.setProperty("--accent-l", hsl2hex(h[0], sat, clamp(h[2], 22, 40)));
     root.setProperty("--accent-d", hsl2hex(h[0], sat, clamp(h[2], 62, 80)));
+  }
+
+  var NOTES = {
+    none:      "Le dégradé reste immobile.",
+    flux:      "Le dégradé glisse lentement d'un bord à l'autre.",
+    rotation:  "L'angle tourne sur lui-même.",
+    pulsation: "La taille du dégradé oscille, comme une respiration.",
+    spectre:   "Un filtre hue-rotate fait défiler toutes les teintes."
+  };
+  function noteAnim(){
+    if(S.anim==="rotation" && !usesAngle()){
+      return isMesh()
+        ? "La rotation d'angle ne s'applique pas à une maille : essayez Flux ou Pulsation."
+        : "La rotation d'angle ne s'applique pas à un dégradé radial : choisissez linéaire ou conique.";
+    }
+    if(S.anim==="flux" && isMesh()){ return "Chaque tache dérive dans sa propre direction."; }
+    return NOTES[S.anim];
   }
 
   function renderControls(){
@@ -681,57 +918,93 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     document.querySelectorAll("[data-shape]").forEach(function(b){
       b.setAttribute("aria-pressed", b.dataset.shape===S.shape ? "true":"false");
     });
-    $("f-angle").hidden = (S.type==="radial");
+
+    $("f-angle").hidden = (S.type==="radial" || isMesh());
     $("f-shape").hidden = (S.type!=="radial");
-    $("f-pos").hidden   = (S.type==="linear");
+    $("f-pos").hidden   = (S.type==="linear" || isMesh());
+    $("f-mesh").hidden  = !isMesh();
+    $("card-track").hidden = isMesh();
     $("anim-opts").hidden = (S.anim==="none");
-    $("anim-note").textContent = NOTES[S.anim];
+    $("anim-note").textContent = noteAnim();
+
+    $("angle").value = S.angle;
+    $("px").value = S.px;
+    $("py").value = S.py;
+    $("soft").value = S.soft;
+    $("base").value = S.base;
+    $("base-hex").value = S.base;
+    $("anim").value = S.anim;
+    $("dur").value = S.dur;
+    $("ease").value = S.ease;
+    $("alt").checked = S.alt;
+
     $("v-angle").textContent = S.angle+"°";
     $("v-px").textContent = S.px+" %";
     $("v-py").textContent = S.py+" %";
+    $("v-soft").textContent = S.soft+" %";
     $("v-dur").textContent = round1(S.dur).toString().replace(".",",")+" s";
     $("legib").dataset.on = S.legib ? "1" : "0";
   }
 
   function render(){
     renderAccent();
-    paintCss();
+    live.textContent = rules("#paint");
     renderTrack();
+    renderBlobs();
     renderStops();
     renderContrast();
     renderControls();
     $("css").textContent = exportCss();
+    memoriser();
   }
 
-  /* ---------- rail : glisser & clavier ---------- */
-  var track = $("track"), dragging = null;
+  /* =========================================================
+     rail d'arrêts (modes axe)
+     ========================================================= */
+  var track = $("track"), dragStop = null;
 
   function posFromEvent(e){
     var r = track.getBoundingClientRect();
     return clamp(((e.clientX - r.left) / r.width) * 100, 0, 100);
   }
+  // Couleur interpolée : un nouvel arrêt s'insère sans déformer le dégradé.
+  function sampleAt(p){
+    var st = sorted();
+    if(p <= st[0].p){ return st[0].c; }
+    if(p >= st[st.length-1].p){ return st[st.length-1].c; }
+    for(var i=0;i<st.length-1;i++){
+      if(p >= st[i].p && p <= st[i+1].p){
+        var span = st[i+1].p - st[i].p;
+        var t = span === 0 ? 0 : (p - st[i].p)/span;
+        var a = hex2rgb(st[i].c), b = hex2rgb(st[i+1].c);
+        return rgb2hex(a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t);
+      }
+    }
+    return st[0].c;
+  }
+
   track.addEventListener("pointerdown", function(e){
     var thumb = e.target.closest(".thumb");
     if(thumb){
-      dragging = parseInt(thumb.dataset.i,10);
-      S.sel = dragging;
+      dragStop = parseInt(thumb.dataset.i,10);
+      S.sel = dragStop;
       track.setPointerCapture(e.pointerId); // capture sur le rail : les poignées sont recréées à chaque rendu
       render();
       return;
     }
-    if(S.stops.length >= 6){ toast("Six arrêts au maximum"); return; }
+    if(S.stops.length >= MAX){ toast("Six arrêts au maximum"); return; }
     var p = posFromEvent(e);
     S.stops.push({ c: sampleAt(p), p: p });
     S.sel = S.stops.length-1;
     render();
   });
   track.addEventListener("pointermove", function(e){
-    if(dragging===null){ return; }
-    S.stops[dragging].p = posFromEvent(e);
+    if(dragStop===null){ return; }
+    S.stops[dragStop].p = posFromEvent(e);
     render();
   });
   ["pointerup","pointercancel"].forEach(function(ev){
-    track.addEventListener(ev, function(){ dragging = null; });
+    track.addEventListener(ev, function(){ dragStop = null; });
   });
   track.addEventListener("keydown", function(e){
     var thumb = e.target.closest(".thumb");
@@ -755,25 +1028,67 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
     }
   });
 
-  // Couleur interpolée à la position p, pour qu'un nouvel arrêt s'insère sans casser le dégradé.
-  function sampleAt(p){
-    var st = sorted();
-    if(p <= st[0].p){ return st[0].c; }
-    if(p >= st[st.length-1].p){ return st[st.length-1].c; }
-    for(var i=0;i<st.length-1;i++){
-      if(p >= st[i].p && p <= st[i+1].p){
-        var span = st[i+1].p - st[i].p;
-        var t = span === 0 ? 0 : (p - st[i].p)/span;
-        var a = hex2rgb(st[i].c), b = hex2rgb(st[i+1].c);
-        return rgb2hex(a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t);
-      }
-    }
-    return st[0].c;
-  }
+  /* =========================================================
+     taches de la maille
+     ========================================================= */
+  var boxBlobs = $("blobs"), dragBlob = null;
 
-  /* ---------- réglages ---------- */
+  function xyFromEvent(e){
+    var r = boxBlobs.getBoundingClientRect();
+    return [ clamp(((e.clientX-r.left)/r.width)*100, 0, 100),
+             clamp(((e.clientY-r.top)/r.height)*100, 0, 100) ];
+  }
+  boxBlobs.addEventListener("pointerdown", function(e){
+    var h = e.target.closest(".blob-h");
+    if(!h){ return; }
+    dragBlob = parseInt(h.dataset.i,10);
+    S.sel = dragBlob;
+    boxBlobs.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    render();
+  });
+  boxBlobs.addEventListener("pointermove", function(e){
+    if(dragBlob===null){ return; }
+    var xy = xyFromEvent(e);
+    S.blobs[dragBlob].x = Math.round(xy[0]);
+    S.blobs[dragBlob].y = Math.round(xy[1]);
+    render();
+  });
+  ["pointerup","pointercancel"].forEach(function(ev){
+    boxBlobs.addEventListener(ev, function(){ dragBlob = null; });
+  });
+  boxBlobs.addEventListener("keydown", function(e){
+    var h = e.target.closest(".blob-h");
+    if(!h){ return; }
+    var i = parseInt(h.dataset.i,10), step = e.shiftKey ? 10 : 2, b = S.blobs[i], moved = true;
+    if(e.key==="ArrowLeft"){ b.x = clamp(b.x-step,0,100); }
+    else if(e.key==="ArrowRight"){ b.x = clamp(b.x+step,0,100); }
+    else if(e.key==="ArrowUp"){ b.y = clamp(b.y-step,0,100); }
+    else if(e.key==="ArrowDown"){ b.y = clamp(b.y+step,0,100); }
+    else if(e.key==="Delete" || e.key==="Backspace"){
+      if(S.blobs.length<=1){ toast("Il faut au moins une tache"); return; }
+      S.blobs.splice(i,1); S.sel = 0; e.preventDefault(); render();
+      var first = boxBlobs.querySelector(".blob-h"); if(first){ first.focus(); }
+      return;
+    }
+    else { moved = false; }
+    if(moved){
+      e.preventDefault(); S.sel = i; render();
+      var again = boxBlobs.querySelector('.blob-h[data-i="'+i+'"]');
+      if(again){ again.focus(); }
+    }
+  });
+
+  /* =========================================================
+     réglages
+     ========================================================= */
   document.querySelectorAll("[data-type]").forEach(function(b){
-    b.addEventListener("click", function(){ S.type = b.dataset.type; render(); });
+    b.addEventListener("click", function(){
+      S.type = b.dataset.type;
+      if(S.anim==="rotation" && !usesAngle()){ S.anim = isMesh() ? "flux" : "pulsation"; }
+      S.sel = 0;
+      render();
+    });
   });
   document.querySelectorAll("[data-shape]").forEach(function(b){
     b.addEventListener("click", function(){ S.shape = b.dataset.shape; render(); });
@@ -781,15 +1096,18 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
   $("angle").addEventListener("input", function(e){ S.angle = +e.target.value; render(); });
   $("px").addEventListener("input", function(e){ S.px = +e.target.value; render(); });
   $("py").addEventListener("input", function(e){ S.py = +e.target.value; render(); });
+  $("soft").addEventListener("input", function(e){ S.soft = +e.target.value; render(); });
+  $("base").addEventListener("input", function(e){ S.base = e.target.value.toUpperCase(); render(); });
+  $("base-hex").addEventListener("change", function(e){
+    if(isHex(e.target.value)){ S.base = normHex(e.target.value); render(); }
+    else { e.target.value = S.base; toast("Code couleur invalide — utilisez #A1B2C3"); }
+  });
   $("anim").addEventListener("change", function(e){
     S.anim = e.target.value;
     if(S.anim==="spectre" || S.anim==="rotation"){
       // Ces deux mouvements bouclent déjà sur eux-mêmes : régulier et sans retour.
-      S.ease = "linear"; $("ease").value = "linear";
-      S.alt = false; $("alt").checked = false;
-    } else {
-      S.alt = true; $("alt").checked = true;
-    }
+      S.ease = "linear"; S.alt = false;
+    } else { S.alt = true; }
     render();
   });
   $("dur").addEventListener("input", function(e){ S.dur = +e.target.value; render(); });
@@ -798,68 +1116,641 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
   $("legib-on").addEventListener("change", function(e){ S.legib = e.target.checked; render(); });
 
   $("add").addEventListener("click", function(){
-    if(S.stops.length>=6){ return; }
-    var st = sorted(), gap = 0, at = 50;
-    for(var i=0;i<st.length-1;i++){
-      if(st[i+1].p - st[i].p > gap){ gap = st[i+1].p - st[i].p; at = (st[i].p + st[i+1].p)/2; }
+    if(isMesh()){
+      if(S.blobs.length>=MAX){ return; }
+      S.blobs.unshift({ c: hsl2hex(ri(0,359), rf(55,90), rf(50,75)), x: ri(20,80), y: ri(20,80), r: ri(35,80) });
+      S.sel = 0;
+    } else {
+      if(S.stops.length>=MAX){ return; }
+      var st = sorted(), gap = 0, at = 50;
+      for(var i=0;i<st.length-1;i++){
+        if(st[i+1].p - st[i].p > gap){ gap = st[i+1].p - st[i].p; at = (st[i].p + st[i+1].p)/2; }
+      }
+      S.stops.push({ c: sampleAt(at), p: at });
+      S.sel = S.stops.length-1;
     }
-    S.stops.push({ c: sampleAt(at), p: at });
-    S.sel = S.stops.length-1;
     render();
   });
 
-  $("shuffle").addEventListener("click", function(){
-    var base = Math.floor(Math.random()*360);
-    var schemes = [[0,28,56],[0,140,200],[0,-35,35],[0,180,90]];
-    var sch = schemes[Math.floor(Math.random()*schemes.length)];
-    var n = S.stops.length;
-    var dark = Math.random() < 0.5;
-    S.stops = [];
+  /* =========================================================
+     générateur : familles de dégradés
+     ========================================================= */
+  // Positions réparties puis bousculées, pour éviter un rythme trop régulier.
+  function espacer(n, courbe, secousse){
+    var out = [];
     for(var i=0;i<n;i++){
       var t = n===1 ? 0 : i/(n-1);
-      var h = base + sch[i % sch.length];
-      var l = dark ? 16 + t*62 : 78 - t*58;
-      var s = 40 + Math.random()*45;
-      S.stops.push({ c: hsl2hex(h, s, l), p: Math.round(t*100) });
+      var p = 100*Math.pow(t, courbe===undefined ? 1 : courbe);
+      if(secousse && i>0 && i<n-1){ p += rf(-secousse, secousse); }
+      out.push(clamp(p,0,100));
     }
-    S.angle = Math.floor(Math.random()*36)*10;
+    return out.sort(function(a,b){ return a-b; });
+  }
+  function assembler(cs, ps){ return cs.map(function(c,i){ return { c:c, p:ps[i] }; }); }
+  // Deux arrêts à la même position produisent une coupe nette.
+  function bandes(cs){
+    var k = cs.length, coupes = [], i;
+    for(i=1;i<k;i++){ coupes.push(rf(18,82)); }
+    coupes.sort(function(a,b){ return a-b; });
+    var bords = [0].concat(coupes,[100]), out = [];
+    for(i=0;i<k;i++){
+      out.push({ c:cs[i], p:bords[i] });
+      out.push({ c:cs[i], p:bords[i+1] });
+    }
+    return out;
+  }
+  function angleNet(){ return pick([0,45,90,135,180,225,270,315]); }
+  function angleLibre(){ return ri(0,35)*10; }
+  // Taches empilées du plus petit au plus grand : le petit point vif reste visible au-dessus.
+  function taches(couleurs, rayons){
+    return couleurs.map(function(c,i){
+      return { c:c, x:ri(4,96), y:ri(4,96), r:rayons[i] };
+    });
+  }
+
+  var FAMILLES = [
+    { id:"maille-profonde", n:"Maille profonde", d:"fond nocturne, taches lumineuses fondues", f:function(){
+        var h = ri(0,359), fond = hsl2hex(h + rf(-25,25), rf(35,70), rf(4,11));
+        var n = ri(3,4), cs = [], rs = [], i;
+        for(i=0;i<n;i++){
+          var t = i/(n-1);
+          cs.push(hsl2hex(h + rf(-40,40)*t, lerp(rf(30,55), rf(75,100), 1-t), lerp(rf(88,97), rf(38,55), t)));
+          rs.push(Math.round(lerp(rf(16,28), rf(78,105), t)));
+        }
+        return { type:"mesh", base:fond, soft:ri(62,85), blobs:taches(cs, rs) };
+      }},
+
+    { id:"maille-claire", n:"Maille claire", d:"fond pâle, taches pastel diffuses", f:function(){
+        var h = ri(0,359), fond = hsl2hex(h + rf(-20,20), rf(18,40), rf(88,96));
+        var n = ri(3,4), cs = [], rs = [], i;
+        for(i=0;i<n;i++){
+          cs.push(hsl2hex(h + i*rf(35,80), rf(45,80), rf(62,80)));
+          rs.push(ri(45,95));
+        }
+        return { type:"mesh", base:fond, soft:ri(66,92), blobs:taches(cs, rs) };
+      }},
+
+    { id:"duo", n:"Duo franc", d:"deux couleurs opposées, du sombre au clair", f:function(){
+        var h = ri(0,359), h2 = h + pick([150,180,210]), sombreDabord = Math.random()<0.5;
+        return {
+          type:"linear", angle:angleLibre(),
+          stops:[
+            { c:hsl2hex(h,  rf(52,88), sombreDabord ? rf(12,26) : rf(64,80)), p:rf(0,10) },
+            { c:hsl2hex(h2, rf(52,88), sombreDabord ? rf(64,80) : rf(12,26)), p:rf(90,100) }
+          ]
+        };
+      }},
+
+    { id:"analogue", n:"Analogue", d:"teintes voisines, transition douce", f:function(){
+        var n = ri(3,4), base = ri(0,359), sens = pick([-1,1]), pas = rf(14,32);
+        var l0 = rf(18,36), l1 = rf(62,86), sat = rf(42,78), cs = [];
+        for(var i=0;i<n;i++){
+          cs.push(hsl2hex(base + sens*i*pas, sat + rf(-10,10), lerp(l0,l1,i/(n-1))));
+        }
+        return { type:pick(["linear","linear","radial"]), angle:angleLibre(),
+                 px:ri(30,70), py:ri(30,70), shape:pick(["circle","ellipse"]),
+                 stops:assembler(cs, espacer(n, rf(0.7,1.4), 8)) };
+      }},
+
+    { id:"triade", n:"Triade", d:"trois teintes à 120°, contraste franc", f:function(){
+        var base = ri(0,359), sat = rf(58,90), cs = [], ls = [rf(26,40), rf(46,62), rf(66,82)];
+        for(var i=0;i<3;i++){ cs.push(hsl2hex(base + i*120 + rf(-12,12), sat + rf(-8,8), ls[i])); }
+        return { type:pick(["linear","conic"]), angle:angleLibre(), px:ri(25,75), py:ri(25,75),
+                 stops:assembler(cs, espacer(3, rf(0.75,1.3), 10)) };
+      }},
+
+    { id:"mono", n:"Monochrome", d:"une seule teinte, rampe de luminosité", f:function(){
+        var h = ri(0,359), n = ri(3,5), s0 = rf(35,72), cs = [];
+        for(var i=0;i<n;i++){
+          var t = i/(n-1);
+          cs.push(hsl2hex(h + rf(-6,6), lerp(s0, s0*0.45, t), lerp(rf(8,20), rf(80,94), t)));
+        }
+        return { type:pick(["linear","radial"]), angle:angleLibre(),
+                 px:ri(20,80), py:ri(20,80), shape:pick(["circle","ellipse"]),
+                 stops:assembler(cs, espacer(n, rf(0.6,1.6), 6)) };
+      }},
+
+    { id:"crepuscule", n:"Crépuscule", d:"balayage chaud, arrêts resserrés en fin de course", f:function(){
+        var depart = rf(325,352), arrivee = rf(35,58)+360, n = ri(4,5), cs = [];
+        for(var i=0;i<n;i++){
+          var t = i/(n-1);
+          cs.push(hsl2hex(lerp(depart,arrivee,t), rf(62,94), lerp(rf(18,30), rf(70,86), t)));
+        }
+        return { type:"linear", angle:pick([0,15,165,180,195,345]),
+                 stops:assembler(cs, espacer(n, rf(0.55,0.85), 5)) };
+      }},
+
+    { id:"spectre", n:"Spectre", d:"cercle chromatique complet, bouclé sans couture", f:function(){
+        var n = ri(5,6), base = ri(0,359), sat = rf(64,92), l = rf(44,64), cs = [], i;
+        for(i=0;i<n-1;i++){ cs.push(hsl2hex(base + i*(360/(n-1)), sat, l + rf(-6,6))); }
+        cs.push(cs[0]); // même couleur aux deux extrémités : la boucle ne saute pas
+        return { type:"conic", angle:angleLibre(), px:ri(35,65), py:ri(35,65),
+                 stops:assembler(cs, espacer(n)) };
+      }},
+
+    { id:"bandes", n:"Bandes nettes", d:"coupes franches, sans transition", f:function(){
+        var k = ri(2,3), base = ri(0,359), ecart = pick([30,60,120,180]), cs = [];
+        for(var i=0;i<k;i++){ cs.push(hsl2hex(base + i*ecart, rf(45,88), rf(30,72))); }
+        var conique = Math.random() < 0.4; // en conique, les bandes deviennent des parts
+        return { type: conique ? "conic" : "linear",
+                 angle: conique ? angleLibre() : angleNet(),
+                 px:ri(35,65), py:ri(35,65), stops:bandes(cs) };
+      }},
+
+    { id:"halo", n:"Halo", d:"foyer lumineux décentré sur fond profond", f:function(){
+        var h = ri(0,359), decale = Math.random()<0.7;
+        return {
+          type:"radial", shape:pick(["circle","ellipse"]),
+          px: decale ? ri(15,85) : 50, py: decale ? ri(15,85) : 50,
+          stops:[
+            { c:hsl2hex(h, rf(40,85), rf(72,92)), p:0 },
+            { c:hsl2hex(h + rf(-25,25), rf(55,90), rf(40,58)), p:rf(18,42) },
+            { c:hsl2hex(h + rf(-40,40), rf(35,70), rf(6,18)), p:100 }
+          ]
+        };
+      }},
+
+    { id:"pastel", n:"Pastel givré", d:"teintes claires, saturation basse", f:function(){
+        var n = ri(3,4), base = ri(0,359), etendue = rf(25,70), cs = [];
+        for(var i=0;i<n;i++){ cs.push(hsl2hex(base + (i/(n-1))*etendue, rf(16,42), rf(80,93))); }
+        return { type:pick(["linear","radial"]), angle:angleLibre(),
+                 px:ri(25,75), py:ri(25,75), shape:pick(["circle","ellipse"]),
+                 stops:assembler(cs, espacer(n, 1, 12)) };
+      }},
+
+    { id:"neon", n:"Nocturne néon", d:"base très sombre, éclats saturés", f:function(){
+        var fond = hsl2hex(ri(215,285), rf(30,60), rf(5,12));
+        var st = [
+          { c:fond, p:0 },
+          { c:hsl2hex(ri(275,340), rf(85,100), rf(50,62)), p:rf(30,52) },
+          { c:hsl2hex(ri(155,205), rf(85,100), rf(48,62)), p:rf(70,88) }
+        ];
+        if(Math.random()<0.5){ st.push({ c:fond, p:100 }); } else { st[st.length-1].p = 100; }
+        return { type:pick(["linear","radial","conic"]), angle:angleLibre(),
+                 px:ri(20,80), py:ri(20,80), shape:pick(["circle","ellipse"]), stops:st };
+      }},
+
+    { id:"terre", n:"Terre cuite", d:"ocres et bruns rabattus", f:function(){
+        var n = ri(3,4), base = rf(16,46), cs = [];
+        for(var i=0;i<n;i++){
+          var t = i/(n-1);
+          cs.push(hsl2hex(base + rf(-14,14), lerp(rf(48,62), rf(20,32), t), lerp(rf(20,32), rf(74,90), t)));
+        }
+        return { type:pick(["linear","linear","radial"]), angle:angleLibre(),
+                 px:ri(30,70), py:ri(30,70), shape:"ellipse",
+                 stops:assembler(cs, espacer(n, rf(0.8,1.3), 9)) };
+      }}
+  ];
+
+  function animationPour(type, famille){
+    if(type==="mesh"){ return pick(["flux","flux","pulsation","spectre"]); }
+    if(famille==="bandes"){ return pick(["rotation","flux","none"]); }
+    if(type==="conic"){ return pick(["rotation","rotation","spectre"]); }
+    if(type==="radial"){ return pick(["pulsation","pulsation","spectre"]); }
+    return pick(["flux","flux","spectre","pulsation"]);
+  }
+
+  var NOMS_TYPE = { linear:"linéaire", radial:"radial", conic:"conique", mesh:"maille" };
+  var derniereFamille = null;
+
+  function appliquer(fam){
+    var r = fam.f();
+    S.type  = r.type;
+    S.angle = r.angle === undefined ? S.angle : r.angle;
+    S.px    = r.px === undefined ? 50 : r.px;
+    S.py    = r.py === undefined ? 50 : r.py;
+    S.shape = r.shape || S.shape;
+    if(r.base){ S.base = r.base; }
+    if(r.soft){ S.soft = r.soft; }
+    if(r.blobs){
+      S.blobs = r.blobs.slice(0,MAX).map(function(b){
+        return { c:b.c, x:clamp(Math.round(b.x),0,100), y:clamp(Math.round(b.y),0,100), r:clamp(Math.round(b.r),5,160) };
+      });
+    }
+    if(r.stops){
+      S.stops = r.stops.slice(0,MAX).map(function(st){
+        return { c:st.c, p:clamp(round1(st.p),0,100) };
+      });
+    }
     S.sel = 0;
-    $("angle").value = S.angle;
+
+    var nb = S.type==="mesh" ? S.blobs.length+" taches" : S.stops.length+" arrêts";
+    var texte = "<b>"+fam.n+"</b> — "+fam.d+"<br>"+nb+" · "+NOMS_TYPE[S.type];
+
+    if($("gen-anim").checked){
+      S.anim = animationPour(S.type, fam.id);
+      if(S.anim==="rotation" && !usesAngle()){ S.anim = "flux"; }
+      S.dur  = Math.round(rf(6,26)*2)/2;
+      if(S.anim==="rotation" || S.anim==="spectre"){ S.ease = "linear"; S.alt = false; }
+      else { S.ease = pick(["ease-in-out","ease-in-out","cubic-bezier(.65,0,.35,1)"]); S.alt = true; }
+      if(S.anim!=="none"){
+        texte += " · animation « "+S.anim+" »";
+      }
+    }
+
+    render();
+    $("gen-out").innerHTML = texte;
+  }
+
+  var selFam = $("family");
+  var optAuto = document.createElement("option");
+  optAuto.value = "auto";
+  optAuto.textContent = "Au hasard — toutes les familles";
+  selFam.appendChild(optAuto);
+  FAMILLES.forEach(function(f){
+    var o = document.createElement("option");
+    o.value = f.id; o.textContent = f.n + " — " + f.d;
+    selFam.appendChild(o);
+  });
+  $("fam-count").textContent = FAMILLES.length + " familles";
+
+  $("generate").addEventListener("click", function(){
+    var choix = selFam.value, fam;
+    if(choix==="auto"){
+      // On évite de retomber deux fois de suite sur la même famille.
+      var pool = FAMILLES.filter(function(f){ return f.id !== derniereFamille; });
+      fam = pick(pool.length ? pool : FAMILLES);
+    } else {
+      fam = FAMILLES.filter(function(f){ return f.id === choix; })[0] || FAMILLES[0];
+    }
+    derniereFamille = fam.id;
+    appliquer(fam);
+  });
+
+  // Recolorer : garde la structure en place, ne change que les couleurs.
+  $("shuffle").addEventListener("click", function(){
+    var base = ri(0,359);
+    var accords = [[0,28,56,84],[0,150,180,210],[0,-35,35,70],[0,180,90,270]];
+    var accord = pick(accords), sombre = Math.random()<0.5;
+
+    if(isMesh()){
+      var n = S.blobs.length;
+      S.base = hsl2hex(base + rf(-20,20), rf(25,60), sombre ? rf(5,12) : rf(88,95));
+      S.blobs = S.blobs.map(function(b,i){
+        return { c:hsl2hex(base + accord[i % accord.length], rf(55,95), sombre ? rf(48,88) : rf(55,75)),
+                 x:b.x, y:b.y, r:b.r };
+      });
+      $("gen-out").innerHTML = "<b>Recoloré</b> — taches et fond changés, disposition conservée.";
+    } else {
+      var m = S.stops.length;
+      S.stops = S.stops.map(function(st,i){
+        var t = m===1 ? 0 : i/(m-1);
+        return { c:hsl2hex(base + accord[i % accord.length], rf(38,86), sombre ? lerp(16,78,t) : lerp(80,20,t)),
+                 p:st.p };
+      });
+      $("gen-out").innerHTML = "<b>Recoloré</b> — structure conservée, "+m+" nouvelles couleurs.";
+    }
+    S.sel = 0;
     render();
   });
 
-  /* ---------- modèles ---------- */
+  /* =========================================================
+     modèles
+     ========================================================= */
+  var PRESETS = [
+    {n:"Nébuleuse", t:"mesh", base:"#04191E", soft:72, b:[
+      ["#F2FFFB",6,29,22],["#7CF5D8",14,35,46],["#18D9A0",30,48,80],["#0E5C63",80,82,98]]},
+    {n:"Brume rose", t:"mesh", base:"#F7EEF2", soft:84, b:[
+      ["#FFD9E8",22,26,60],["#C9B8FF",78,32,72],["#FFE9C7",50,84,80]]},
+    {n:"Aurore",  t:"linear", a:160, s:[["#0A1E3C",0],["#12695F",46],["#8CE0A8",100]]},
+    {n:"Braise",  t:"linear", a:35,  s:[["#2B0B16",0],["#B4341C",55],["#F2B33D",100]]},
+    {n:"Marée",   t:"linear", a:200, s:[["#E8DCC2",0],["#6FBFB6",60],["#123A54",100]]},
+    {n:"Néon",    t:"conic",  a:0,   s:[["#FF3D9A",0],["#3B2ED0",34],["#22D3EE",68],["#FF3D9A",100]]},
+    {n:"Argile",  t:"radial", a:0,   s:[["#F6EFE7",0],["#D4A373",62],["#6B4423",100]]},
+    {n:"Encre",   t:"linear", a:128, s:[["#111827",0],["#374151",50],["#9CA3AF",100]]}
+  ];
+
+  function apercuPreset(p){
+    if(p.t==="mesh"){
+      var couches = p.b.map(function(b){
+        return "radial-gradient("+b[3]+"% "+b[3]+"% at "+b[1]+"% "+b[2]+"%, "+b[0]+" 0%, "
+             + rgba(b[0],.55)+" "+Math.round(p.soft*0.45)+"%, "+rgba(b[0],0)+" "+p.soft+"%)";
+      }).join(", ");
+      return { backgroundColor:p.base, backgroundImage:couches };
+    }
+    return { backgroundImage:"linear-gradient(90deg, "+p.s.map(function(s){ return s[0]+" "+s[1]+"%"; }).join(", ")+")" };
+  }
+
   var pbox = $("presets");
   PRESETS.forEach(function(p){
     var b = document.createElement("button");
     b.type = "button"; b.className = "preset";
     var sw = document.createElement("span");
     sw.className = "swatch";
-    sw.style.background = "linear-gradient(90deg, "+p.s.map(function(s){ return s[0]+" "+s[1]+"%"; }).join(", ")+")";
+    var st = apercuPreset(p);
+    if(st.backgroundColor){ sw.style.backgroundColor = st.backgroundColor; }
+    sw.style.backgroundImage = st.backgroundImage;
     var nm = document.createElement("span");
     nm.className = "nm"; nm.textContent = p.n;
     b.append(sw,nm);
     b.setAttribute("aria-label","Appliquer le modèle "+p.n);
     b.addEventListener("click", function(){
-      S.type = p.t; S.angle = p.a; S.sel = 0;
-      S.stops = p.s.map(function(s){ return { c:s[0], p:s[1] }; });
-      $("angle").value = p.a;
+      S.type = p.t; S.sel = 0;
+      if(p.t==="mesh"){
+        S.base = p.base; S.soft = p.soft;
+        S.blobs = p.b.map(function(x){ return { c:x[0], x:x[1], y:x[2], r:x[3] }; });
+      } else {
+        S.angle = p.a;
+        S.stops = p.s.map(function(s){ return { c:s[0], p:s[1] }; });
+      }
+      if(S.anim==="rotation" && !usesAngle()){ S.anim = "flux"; }
+      $("gen-out").innerHTML = "<b>"+p.n+"</b> — modèle appliqué.";
       render();
     });
     pbox.appendChild(b);
   });
 
-  /* ---------- copie ---------- */
-  var toastEl = $("toast"), toastTimer;
+  /* =========================================================
+     dessin sur canevas (pour le PNG)
+     ========================================================= */
+  function dessiner(ctx, W, H){
+    var i;
+    if(isMesh()){
+      ctx.fillStyle = S.base;
+      ctx.fillRect(0,0,W,H);
+      // Ordre inverse : le premier calque CSS est celui du dessus, donc peint en dernier.
+      for(i=S.blobs.length-1;i>=0;i--){
+        var b = S.blobs[i];
+        var cx = b.x/100*W, cy = b.y/100*H, rx = b.r/100*W, ry = b.r/100*H;
+        if(rx<=0 || ry<=0){ continue; }
+        var k = ry/rx;
+        ctx.save();
+        ctx.translate(cx,cy);
+        ctx.scale(1, k);
+        var g = ctx.createRadialGradient(0,0,0,0,0,rx);
+        g.addColorStop(0, b.c);
+        g.addColorStop(clamp(S.soft*0.45/100,0,1), rgba(b.c,.55));
+        g.addColorStop(clamp(S.soft/100,0,1), rgba(b.c,0));
+        ctx.fillStyle = g;
+        // Rectangle exprimé dans l'espace déjà translaté et mis à l'échelle.
+        ctx.fillRect(-cx-W, (-cy-H)/k, W*3, (H*3)/k);
+        ctx.restore();
+      }
+      return true;
+    }
+
+    var st = sorted();
+    function ajouter(g){
+      st.forEach(function(s){ g.addColorStop(clamp(s.p/100,0,1), s.c); });
+    }
+
+    if(S.type==="linear"){
+      var a = S.angle*Math.PI/180;
+      var dx = Math.sin(a), dy = -Math.cos(a);
+      var L = Math.abs(W*dx) + Math.abs(H*dy);
+      var g1 = ctx.createLinearGradient(W/2-dx*L/2, H/2-dy*L/2, W/2+dx*L/2, H/2+dy*L/2);
+      ajouter(g1); ctx.fillStyle = g1; ctx.fillRect(0,0,W,H);
+      return true;
+    }
+
+    if(S.type==="radial"){
+      var cx2 = S.px/100*W, cy2 = S.py/100*H;
+      var mx = Math.max(cx2, W-cx2), my = Math.max(cy2, H-cy2);
+      if(S.shape==="circle"){
+        var r = Math.sqrt(mx*mx+my*my);
+        var g2 = ctx.createRadialGradient(cx2,cy2,0,cx2,cy2,r);
+        ajouter(g2); ctx.fillStyle = g2; ctx.fillRect(0,0,W,H);
+      } else {
+        // farthest-corner en ellipse : demi-axes à la diagonale des demi-côtés les plus longs.
+        var rx2 = mx*Math.SQRT2, ry2 = my*Math.SQRT2, k2 = ry2/rx2;
+        ctx.save(); ctx.translate(cx2,cy2); ctx.scale(1, k2);
+        var g3 = ctx.createRadialGradient(0,0,0,0,0,rx2);
+        ajouter(g3); ctx.fillStyle = g3;
+        ctx.fillRect(-cx2-W, (-cy2-H)/k2, W*3, (H*3)/k2); ctx.restore();
+      }
+      return true;
+    }
+
+    if(typeof ctx.createConicGradient !== "function"){ return false; }
+    var g4 = ctx.createConicGradient((S.angle-90)*Math.PI/180, S.px/100*W, S.py/100*H);
+    ajouter(g4); ctx.fillStyle = g4; ctx.fillRect(0,0,W,H);
+    return true;
+  }
+
+  /* =========================================================
+     téléchargement
+     ========================================================= */
+  var dlNamespace; // résolu une seule fois
+  function capaDownloads(){
+    if(dlNamespace !== undefined){ return Promise.resolve(dlNamespace); }
+    if(typeof window.claude === "undefined" || !window.claude || typeof window.claude.use !== "function"){
+      dlNamespace = null;
+      return Promise.resolve(null);
+    }
+    return window.claude.use("downloads").then(function(ns){
+      dlNamespace = ns || null;
+      return dlNamespace;
+    }, function(){ dlNamespace = null; return null; });
+  }
+
+  function messageErreur(code){
+    switch(code){
+      case "declined":            return "Téléchargement refusé.";
+      case "too_large":           return "Fichier trop lourd — choisissez une taille inférieure.";
+      case "rate_limited":        return "Une demande est déjà en cours — réessayez dans un instant.";
+      case "rejected_extension":
+      case "extension_not_enabled": return "Ce format n'est pas autorisé ici.";
+      default:                    return "Téléchargement impossible dans cet aperçu.";
+    }
+  }
+
+  // Deux chemins : la capacité de l'hôte quand elle existe, sinon un lien de téléchargement classique.
+  function telecharger(nom, secours, data){
+    return capaDownloads().then(function(ns){
+      if(!ns){
+        var url = URL.createObjectURL(data instanceof Blob ? data : new Blob([data], {type:"text/plain"}));
+        var a = document.createElement("a");
+        a.href = url; a.download = nom;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+        toast("Téléchargement lancé — " + nom);
+        return;
+      }
+      return ns.save({ filename:nom, data:data }).then(function(){
+        toast("Enregistré — " + nom);
+      }, function(err){
+        var code = err && err.code;
+        // L'extension .css n'est pas toujours autorisée : on repropose le même contenu en .txt.
+        if(secours && (code==="rejected_extension" || code==="extension_not_enabled")){
+          return ns.save({ filename:secours, data:data }).then(function(){
+            toast("Enregistré — " + secours);
+          }, function(e2){ toast(messageErreur(e2 && e2.code)); });
+        }
+        toast(messageErreur(code));
+      });
+    });
+  }
+
+  var SLUG = { linear:"lineaire", radial:"radial", conic:"conique", mesh:"maille" };
+  function nomFichier(){ return "prisme-" + SLUG[S.type]; }
+
+  $("dl-png").addEventListener("click", function(){
+    var dims = $("size").value.split("x");
+    var W = parseInt(dims[0],10), H = parseInt(dims[1],10);
+    var cv = document.createElement("canvas");
+    cv.width = W; cv.height = H;
+    var ctx = cv.getContext("2d");
+    if(!dessiner(ctx, W, H)){
+      toast("Votre navigateur ne sait pas dessiner un dégradé conique — export impossible.");
+      return;
+    }
+    cv.toBlob(function(blob){
+      if(!blob){ toast("Génération de l'image impossible."); return; }
+      telecharger(nomFichier()+"-"+W+"x"+H+".png", null, blob);
+    }, "image/png");
+  });
+
+  $("dl-css").addEventListener("click", function(){
+    telecharger(nomFichier()+".css", nomFichier()+"-css.txt", exportCss());
+  });
+
+  /* =========================================================
+     mémoire
+     ========================================================= */
+  var CLE = "prisme.memoire.v1", CLE_ETAT = "prisme.etat.v1";
+  var stockageOk = true, memoire = [];
+
+  function lire(cle){
+    try { return window.localStorage.getItem(cle); }
+    catch(e){ stockageOk = false; return null; }
+  }
+  function ecrire(cle, val){
+    try { window.localStorage.setItem(cle, val); return true; }
+    catch(e){ stockageOk = false; return false; }
+  }
+
+  function etatActuel(){
+    return {
+      type:S.type, angle:S.angle, px:S.px, py:S.py, shape:S.shape,
+      stops:S.stops.map(function(s){ return {c:s.c,p:s.p}; }),
+      base:S.base, soft:S.soft,
+      blobs:S.blobs.map(function(b){ return {c:b.c,x:b.x,y:b.y,r:b.r}; }),
+      anim:S.anim, dur:S.dur, ease:S.ease, alt:S.alt
+    };
+  }
+  function chargerEtat(e){
+    if(!e || !e.type){ return false; }
+    S.type = e.type; S.angle = e.angle; S.px = e.px; S.py = e.py; S.shape = e.shape || "circle";
+    if(e.stops && e.stops.length >= 2){ S.stops = e.stops; }
+    if(e.blobs && e.blobs.length >= 1){ S.blobs = e.blobs; }
+    if(e.base){ S.base = e.base; }
+    if(typeof e.soft === "number"){ S.soft = e.soft; }
+    S.anim = e.anim || "none"; S.dur = e.dur || 12;
+    S.ease = e.ease || "ease-in-out"; S.alt = !!e.alt;
+    S.sel = 0;
+    return true;
+  }
+
+  // Reprise automatique : l'état courant est réécrit à chaque rendu.
+  var tempoMemo;
+  function memoriser(){
+    if(!stockageOk){ return; }
+    clearTimeout(tempoMemo);
+    tempoMemo = setTimeout(function(){
+      ecrire(CLE_ETAT, JSON.stringify(etatActuel()));
+    }, 400);
+  }
+
+  function apercuEtat(e){
+    var sauv = { type:S.type, stops:S.stops, base:S.base, soft:S.soft, blobs:S.blobs, angle:S.angle, px:S.px, py:S.py, shape:S.shape };
+    S.type = e.type; S.stops = e.stops || S.stops; S.base = e.base || S.base;
+    S.soft = typeof e.soft === "number" ? e.soft : S.soft;
+    S.blobs = e.blobs || S.blobs;
+    var css;
+    if(S.type==="mesh"){ css = { c:S.base, i:meshLayers("") }; }
+    else { css = { c:"transparent", i:"linear-gradient(90deg, "+stopList()+")" }; }
+    S.type = sauv.type; S.stops = sauv.stops; S.base = sauv.base; S.soft = sauv.soft; S.blobs = sauv.blobs;
+    S.angle = sauv.angle; S.px = sauv.px; S.py = sauv.py; S.shape = sauv.shape;
+    return css;
+  }
+
+  function renderMemoire(){
+    var ul = $("mem-list");
+    ul.innerHTML = "";
+    $("mem-count").textContent = memoire.length + (memoire.length>1 ? " enregistrés" : " enregistré");
+
+    if(!memoire.length){
+      var vide = document.createElement("li");
+      vide.className = "mem-empty";
+      vide.textContent = "Aucun dégradé enregistré pour l'instant.";
+      ul.appendChild(vide);
+    }
+
+    memoire.forEach(function(m, idx){
+      var li = document.createElement("li");
+      li.className = "mem-item";
+
+      var sw = document.createElement("span");
+      sw.className = "sw";
+      var ap = apercuEtat(m.etat);
+      sw.style.backgroundColor = ap.c;
+      sw.style.backgroundImage = ap.i;
+
+      var nm = document.createElement("button");
+      nm.type = "button"; nm.className = "nm";
+      nm.innerHTML = "";
+      nm.appendChild(document.createTextNode(m.nom));
+      var sous = document.createElement("span");
+      sous.textContent = NOMS_TYPE[m.etat.type] + " · " + m.date;
+      nm.appendChild(sous);
+      nm.setAttribute("aria-label","Rappeler le dégradé « "+m.nom+" »");
+      nm.addEventListener("click", function(){
+        if(chargerEtat(m.etat)){
+          $("gen-out").innerHTML = "<b>"+m.nom+"</b> — rappelé depuis la mémoire.";
+          render();
+        }
+      });
+
+      var del = document.createElement("button");
+      del.type = "button"; del.className = "btn btn-icon"; del.textContent = "×";
+      del.setAttribute("aria-label","Oublier le dégradé « "+m.nom+" »");
+      del.addEventListener("click", function(){
+        memoire.splice(idx,1);
+        ecrire(CLE, JSON.stringify(memoire));
+        renderMemoire();
+        toast("Dégradé oublié");
+      });
+
+      li.append(sw, nm, del);
+      ul.appendChild(li);
+    });
+
+    $("mem-note").textContent = stockageOk
+      ? "Enregistré dans ce navigateur, sur cet appareil. Le dernier réglage est repris à la réouverture."
+      : "Ce navigateur refuse le stockage local : la mémoire ne durera que le temps de la session.";
+  }
+
+  $("mem-save").addEventListener("click", function(){
+    var champ = $("mem-name");
+    var nom = champ.value.trim() || (NOMS_TYPE[S.type].charAt(0).toUpperCase() + NOMS_TYPE[S.type].slice(1) + " " + (memoire.length+1));
+    var d = new Date();
+    memoire.unshift({
+      nom: nom.slice(0,40),
+      date: String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+" "
+          + String(d.getHours()).padStart(2,"0")+"h"+String(d.getMinutes()).padStart(2,"0"),
+      etat: etatActuel()
+    });
+    if(memoire.length > 24){ memoire.length = 24; }
+    ecrire(CLE, JSON.stringify(memoire));
+    champ.value = "";
+    renderMemoire();
+    toast("« "+nom+" » enregistré");
+  });
+
+  /* =========================================================
+     copie et messages
+     ========================================================= */
+  var toastEl = $("toast"), tempoToast;
   function toast(msg){
     toastEl.textContent = msg;
     toastEl.dataset.on = "1";
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function(){ toastEl.dataset.on = "0"; }, 2200);
+    clearTimeout(tempoToast);
+    tempoToast = setTimeout(function(){ toastEl.dataset.on = "0"; }, 2600);
   }
+
   $("copy").addEventListener("click", function(){
     var text = exportCss();
-    function fallback(){
+    function secours(){
       var ta = document.createElement("textarea");
       ta.value = text; ta.setAttribute("readonly","");
       ta.style.position = "fixed"; ta.style.opacity = "0";
@@ -870,13 +1761,25 @@ footer{margin-top:2.2rem;padding-top:1rem;border-top:1px solid var(--line);font-
       toast(ok ? "CSS copié dans le presse-papiers" : "Copie impossible — sélectionnez le code puis Ctrl+C");
     }
     if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(text).then(function(){
-        toast("CSS copié dans le presse-papiers");
-      }, fallback);
-    } else { fallback(); }
+      navigator.clipboard.writeText(text).then(function(){ toast("CSS copié dans le presse-papiers"); }, secours);
+    } else { secours(); }
   });
 
+  /* =========================================================
+     démarrage
+     ========================================================= */
+  try {
+    var brut = lire(CLE);
+    if(brut){ memoire = JSON.parse(brut) || []; }
+  } catch(e){ memoire = []; }
+
+  try {
+    var dernier = lire(CLE_ETAT);
+    if(dernier){ chargerEtat(JSON.parse(dernier)); }
+  } catch(e){ /* état illisible : on garde celui par défaut */ }
+
   render();
+  renderMemoire();
 })();
 </script>
 </body>
