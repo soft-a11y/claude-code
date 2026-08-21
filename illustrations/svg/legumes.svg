@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 1152" width="2048" height="1152" role="img" aria-labelledby="titre">
+  <title id="titre">Légumes</title>
+  <defs>
+    <clipPath id="leg-tete"><path d="M336 610C288 574 296 494 356 472C342 396 412 340 478 362C508 300 604 296 644 350C714 322 782 372 776 440C834 464 838 546 786 580C796 636 736 678 670 662C616 700 486 700 432 662C372 676 324 650 336 610Z"/></clipPath>
+    <clipPath id="leg-tige"><path d="M452 630C442 762 430 898 462 972C528 1006 616 1006 668 972C696 898 682 762 672 630Z"/></clipPath>
+    <clipPath id="leg-aubergine"><path d="M1672 508C1744 566 1742 720 1668 838C1594 956 1424 992 1348 906C1272 820 1330 686 1440 596C1520 530 1620 466 1672 508Z"/></clipPath>
+    <clipPath id="leg-tomate"><path d="M1050 552C1180 552 1284 645 1284 760C1284 875 1180 968 1050 968C920 968 816 875 816 760C816 645 920 552 1050 552Z"/></clipPath>
+    <path id="leg-sepale" d="M0 0C-34 -30 -42 -92 0 -150C42 -92 34 -30 0 0Z"/>
+  </defs>
+
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" transform="translate(1024 576) scale(1.08) translate(-1065 -650)">
+
+    <!-- Brocoli -->
+    <g id="brocoli">
+      <path fill="#A8C46E" d="M452 630C442 762 430 898 462 972C528 1006 616 1006 668 972C696 898 682 762 672 630Z"/>
+      <g clip-path="url(#leg-tige)"><path fill="#85A04E" d="M596 600C628 760 626 900 600 1010H760V590Z"/></g>
+      <path stroke="#24401A" stroke-width="16" d="M452 630C442 762 430 898 462 972C528 1006 616 1006 668 972C696 898 682 762 672 630"/>
+      <path fill="#5E8F3A" d="M336 610C288 574 296 494 356 472C342 396 412 340 478 362C508 300 604 296 644 350C714 322 782 372 776 440C834 464 838 546 786 580C796 636 736 678 670 662C616 700 486 700 432 662C372 676 324 650 336 610Z"/>
+      <g clip-path="url(#leg-tete)">
+        <path fill="#3F6B26" d="M666 316C766 424 786 588 704 700L920 720V300Z"/>
+        <g stroke="#3F6B26" stroke-width="14">
+          <path d="M430 596C470 550 468 494 446 452"/>
+          <path d="M560 542C596 496 646 480 690 490"/>
+          <path d="M646 646C690 622 730 588 740 546"/>
+          <path d="M500 664C522 626 540 592 542 552"/>
+        </g>
+      </g>
+      <path stroke="#24401A" stroke-width="16" d="M336 610C288 574 296 494 356 472C342 396 412 340 478 362C508 300 604 296 644 350C714 322 782 372 776 440C834 464 838 546 786 580C796 636 736 678 670 662C616 700 486 700 432 662C372 676 324 650 336 610Z"/>
+    </g>
+
+    <!-- Aubergine -->
+    <g id="aubergine">
+      <path stroke="#3F6B26" stroke-width="30" d="M1700 478C1748 424 1792 392 1834 374"/>
+      <g fill="#4C7A2A" stroke="#2A4B1A" stroke-width="16" transform="translate(1668 526) rotate(48)">
+        <use href="#leg-sepale" transform="rotate(-46) scale(.92)"/>
+        <use href="#leg-sepale" transform="rotate(-15) scale(1)"/>
+        <use href="#leg-sepale" transform="rotate(16) scale(1)"/>
+        <use href="#leg-sepale" transform="rotate(47) scale(.92)"/>
+      </g>
+      <path fill="#6B3D8F" d="M1672 508C1744 566 1742 720 1668 838C1594 956 1424 992 1348 906C1272 820 1330 686 1440 596C1520 530 1620 466 1672 508Z"/>
+      <g clip-path="url(#leg-aubergine)">
+        <path fill="#4A2865" d="M1606 528C1700 690 1670 902 1516 992L1800 1020V492Z"/>
+        <path fill="#9B6ABF" d="M1398 802C1402 720 1454 646 1528 610C1554 598 1568 626 1546 640C1484 676 1446 736 1440 806C1436 848 1394 850 1398 802Z"/>
+      </g>
+      <path stroke="#2A1740" stroke-width="16" d="M1672 508C1744 566 1742 720 1668 838C1594 956 1424 992 1348 906C1272 820 1330 686 1440 596C1520 530 1620 466 1672 508Z"/>
+    </g>
+
+    <!-- Tomate -->
+    <g id="tomate">
+      <path stroke="#3F6B26" stroke-width="30" d="M1050 566V478"/>
+      <g fill="#4C7A2A" stroke="#2A4B1A" stroke-width="16">
+        <use href="#leg-sepale" transform="translate(1050 592) rotate(-74) scale(.86 .74)"/>
+        <use href="#leg-sepale" transform="translate(1050 592) rotate(-37) scale(.86 .74)"/>
+        <use href="#leg-sepale" transform="translate(1050 592) scale(.86 .74)"/>
+        <use href="#leg-sepale" transform="translate(1050 592) rotate(37) scale(.86 .74)"/>
+        <use href="#leg-sepale" transform="translate(1050 592) rotate(74) scale(.86 .74)"/>
+      </g>
+      <path fill="#E5372C" d="M1050 552C1180 552 1284 645 1284 760C1284 875 1180 968 1050 968C920 968 816 875 816 760C816 645 920 552 1050 552Z"/>
+      <g clip-path="url(#leg-tomate)">
+        <path fill="#B62B22" d="M1146 574C1234 686 1224 862 1104 968L1330 992V536Z"/>
+        <path fill="#F2705F" d="M888 692C904 634 954 598 1004 600C1026 601 1032 628 1010 636C962 652 928 692 918 732C910 764 872 752 888 692Z"/>
+      </g>
+      <path stroke="#2A1210" stroke-width="16" d="M1050 552C1180 552 1284 645 1284 760C1284 875 1180 968 1050 968C920 968 816 875 816 760C816 645 920 552 1050 552Z"/>
+    </g>
+
+  </g>
+</svg>

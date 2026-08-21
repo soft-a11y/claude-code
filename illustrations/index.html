@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Illustrations Mezze</title>
+<style>
+  :root { color-scheme: dark; --bg:#2b2b2b; --card:#444444; --text:#ececec; --muted:#9a9a9a }
+  * { box-sizing: border-box }
+  body { margin:0; background:var(--bg); color:var(--text);
+         font:400 16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif }
+  header { padding:48px 32px 8px; max-width:1400px; margin:0 auto }
+  h1 { margin:0 0 8px; font-size:30px; letter-spacing:-.01em }
+  header p { margin:0; color:var(--muted); max-width:62ch }
+  .grid { display:grid; gap:24px; padding:32px; max-width:1400px; margin:0 auto;
+          grid-template-columns:repeat(auto-fill,minmax(360px,1fr)) }
+  figure { margin:0 }
+  .art { background:var(--card); border-radius:10px; overflow:hidden }
+  .art img { display:block; width:100%; height:auto }
+  figcaption { padding:10px 2px 0; font-size:13px; letter-spacing:.08em;
+               text-transform:uppercase; color:var(--muted) }
+</style>
+<header>
+  <h1>Illustrations Mezze</h1>
+  <p>Illustrations de catégorie reprenant le style de la maquette Figma : contour
+     sombre épais, aplats bi-tons, pas de dégradé. Fond&nbsp;<code>#444444</code>,
+     identique à Figma.</p>
+</header>
+<div class="grid">
+  <figure><div class="art"><img src="svg/fruits.svg" alt="Fruits"></div><figcaption>Fruits</figcaption></figure>
+  <figure><div class="art"><img src="svg/legumes.svg" alt="Légumes"></div><figcaption>Légumes</figcaption></figure>
+  <figure><div class="art"><img src="svg/laitages.svg" alt="Laitages"></div><figcaption>Laitages</figcaption></figure>
+  <figure><div class="art"><img src="svg/pain.svg" alt="Pain"></div><figcaption>Pain</figcaption></figure>
+  <figure><div class="art"><img src="svg/graine.svg" alt="Graine"></div><figcaption>Graine</figcaption></figure>
+  <figure><div class="art"><img src="svg/pates-riz-semoule.svg" alt="Pâtes, riz et semoules"></div><figcaption>Pâtes / Riz / Semoules</figcaption></figure>
+  <figure><div class="art"><img src="svg/epices.svg" alt="Épices"></div><figcaption>Épices</figcaption></figure>
+  <figure><div class="art"><img src="svg/noix.svg" alt="Graine genre noix"></div><figcaption>Graine genre noix</figcaption></figure>
+  <figure><div class="art"><img src="svg/boissons.svg" alt="Boissons"></div><figcaption>Boissons</figcaption></figure>
+  <figure><div class="art"><img src="svg/carotte.svg" alt="Carotte"></div><figcaption>Carotte — essai de style</figcaption></figure>
+</div>

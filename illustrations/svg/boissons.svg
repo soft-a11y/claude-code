@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 1152" width="2048" height="1152" role="img" aria-labelledby="titre">
+  <title id="titre">Boissons</title>
+  <defs>
+    <clipPath id="bois-bouteille"><path d="M566 892V520C566 452 596 402 632 372V246H812V372C848 402 878 452 878 520V892C878 948 848 976 792 976H652C596 976 566 948 566 892Z"/></clipPath>
+    <clipPath id="bois-verre"><path d="M1092 466H1508L1452 918C1448 954 1418 980 1382 980H1218C1182 980 1152 954 1148 918Z"/></clipPath>
+  </defs>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Bouteille de jus -->
+    <g id="bouteille">
+      <path fill="#E0700A" stroke="#191919" stroke-width="22" d="M638 252V196C638 172 656 158 682 158H762C788 158 806 172 806 196V252Z"/>
+      <path fill="#D8E4E8" d="M566 892V520C566 452 596 402 632 372V246H812V372C848 402 878 452 878 520V892C878 948 848 976 792 976H652C596 976 566 948 566 892Z"/>
+      <g clip-path="url(#bois-bouteille)">
+        <path fill="#FF8C11" d="M540 470H904V1000H540Z"/>
+        <path fill="#E0700A" d="M812 440C846 500 856 560 856 610V1000H920V430Z"/>
+        <path fill="#FFFFFF" opacity=".55" d="M604 930V536C604 486 618 448 644 420L676 442C654 468 640 500 640 540V930Z"/>
+        <path fill="#FAF0D9" d="M540 560h364v96H540Z"/>
+        <path stroke="#191919" stroke-width="16" d="M540 560h364M540 656h364"/>
+      </g>
+      <path stroke="#191919" stroke-width="22" d="M566 892V520C566 452 596 402 632 372V246H812V372C848 402 878 452 878 520V892C878 948 848 976 792 976H652C596 976 566 948 566 892Z"/>
+    </g>
+
+    <!-- Verre -->
+    <g id="verre">
+      <path stroke="#191919" stroke-width="52" d="M1418 386L1330 218"/>
+      <path stroke="#E8402F" stroke-width="26" d="M1418 386L1330 218"/>
+      <path fill="#D8E4E8" d="M1092 466H1508L1452 918C1448 954 1418 980 1382 980H1218C1182 980 1152 954 1148 918Z"/>
+      <g clip-path="url(#bois-verre)">
+        <path fill="#FF8C11" d="M1060 560H1540V1000H1060Z"/>
+        <path fill="#E0700A" d="M1420 540C1440 700 1420 880 1360 990L1560 1000V520Z"/>
+        <path fill="#FFFFFF" opacity=".5" d="M1146 940L1104 500H1152L1194 940Z"/>
+        <path stroke="#191919" stroke-width="16" d="M1060 560H1540"/>
+      </g>
+      <path stroke="#191919" stroke-width="22" d="M1092 466H1508L1452 918C1448 954 1418 980 1382 980H1218C1182 980 1152 954 1148 918Z"/>
+      <!-- Rondelle d'agrume sur le bord -->
+      <g transform="translate(1506 470) rotate(-18)">
+        <path fill="#FF8C11" stroke="#191919" stroke-width="22" d="M0 -118A118 118 0 0 1 0 118A118 118 0 0 1 0 -118Z"/>
+        <path fill="#FFB45C" stroke="#191919" stroke-width="14" d="M0 -86A86 86 0 0 1 0 86A86 86 0 0 1 0 -86Z"/>
+        <g stroke="#E0700A" stroke-width="12">
+          <path d="M0 0V-84"/><path d="M0 0L60 -60"/><path d="M0 0H84"/><path d="M0 0L60 60"/>
+          <path d="M0 0V84"/><path d="M0 0L-60 60"/><path d="M0 0H-84"/><path d="M0 0L-60 -60"/>
+        </g>
+      </g>
+    </g>
+
+  </g>
+</svg>

@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 1152" width="2048" height="1152" role="img" aria-labelledby="titre">
+  <title id="titre">Laitages</title>
+  <defs>
+    <clipPath id="lait-bouteille"><path d="M636 906V528C636 466 664 422 696 398V300H806V398C838 422 866 466 866 528V906C866 956 840 982 790 982H712C662 982 636 956 636 906Z"/></clipPath>
+    <clipPath id="lait-bouchon"><path d="M688 306V268C688 244 704 232 728 232H774C798 232 814 244 814 268V306Z"/></clipPath>
+    <clipPath id="lait-pot"><path d="M1490 662H1748L1714 942C1712 962 1696 976 1676 976H1562C1542 976 1526 962 1524 942Z"/></clipPath>
+  </defs>
+
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" transform="translate(1024 576) scale(1.26) translate(-1209 -607)">
+
+    <!-- Bouteille de lait -->
+    <g id="bouteille">
+      <path fill="#82C9F9" d="M688 306V268C688 244 704 232 728 232H774C798 232 814 244 814 268V306Z"/>
+      <g clip-path="url(#lait-bouchon)"><path fill="#3C8EC9" d="M680 284h146v40H680Z"/></g>
+      <path stroke="#1E1E1B" stroke-width="16" d="M688 306V268C688 244 704 232 728 232H774C798 232 814 244 814 268V306Z"/>
+      <path fill="#FAF0D9" d="M636 906V528C636 466 664 422 696 398V300H806V398C838 422 866 466 866 528V906C866 956 840 982 790 982H712C662 982 636 956 636 906Z"/>
+      <g clip-path="url(#lait-bouteille)">
+        <path fill="#E7DFCC" d="M800 380C830 430 838 480 838 528V1000H900V360Z"/>
+        <path fill="#FFFDF6" d="M666 940V540C666 494 680 458 704 432L730 450C710 474 698 506 698 544V940Z"/>
+        <path fill="#82C9F9" d="M620 646h262v122H620Z"/>
+        <path stroke="#1E1E1B" stroke-width="14" d="M620 646h262M620 768h262"/>
+      </g>
+      <path stroke="#1E1E1B" stroke-width="16" d="M636 906V528C636 466 664 422 696 398V300H806V398C838 422 866 466 866 528V906C866 956 840 982 790 982H712C662 982 636 956 636 906Z"/>
+    </g>
+
+    <!-- Part de fromage -->
+    <g id="fromage">
+      <path fill="#FFD166" d="M940 800L1180 660L1400 760Z"/>
+      <path fill="#E8A93F" d="M940 800L1400 760V870L940 910Z"/>
+      <g fill="#C98A2A">
+        <ellipse cx="1080" cy="844" rx="32" ry="24"/><ellipse cx="1232" cy="826" rx="26" ry="20"/><ellipse cx="1344" cy="816" rx="19" ry="15"/>
+      </g>
+      <g fill="#E0B04A">
+        <ellipse cx="1128" cy="742" rx="30" ry="16"/><ellipse cx="1262" cy="718" rx="23" ry="13"/>
+      </g>
+      <path stroke="#3A2A0E" stroke-width="16" d="M940 800L1180 660L1400 760V870L940 910Z"/>
+      <path stroke="#3A2A0E" stroke-width="16" d="M940 800L1400 760"/>
+    </g>
+
+    <!-- Pot de yaourt -->
+    <g id="yaourt">
+      <path fill="#FAF0D9" d="M1490 662H1748L1714 942C1712 962 1696 976 1676 976H1562C1542 976 1526 962 1524 942Z"/>
+      <g clip-path="url(#lait-pot)">
+        <path fill="#E7DFCC" d="M1660 640h140v360h-140Z"/>
+        <path fill="#82C9F9" d="M1470 764h300v82h-300Z"/>
+        <path stroke="#1E1E1B" stroke-width="14" d="M1470 764h300M1470 846h300"/>
+      </g>
+      <path stroke="#1E1E1B" stroke-width="16" d="M1490 662H1748L1714 942C1712 962 1696 976 1676 976H1562C1542 976 1526 962 1524 942Z"/>
+      <path fill="#82C9F9" stroke="#1E1E1B" stroke-width="16" d="M1478 604H1760C1774 604 1784 616 1782 630L1774 668H1464L1456 630C1454 616 1464 604 1478 604Z"/>
+    </g>
+
+  </g>
+</svg>

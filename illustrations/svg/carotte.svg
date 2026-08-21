@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 1152" width="2048" height="1152" role="img" aria-labelledby="titre">
+  <title id="titre">Carotte</title>
+  <defs>
+    <clipPath id="carotte-corps">
+      <path d="M250 880C500 720 1030 438 1303 349C1544 273 1658 635 1417 711C1200 856 495 822 250 880Z"/>
+    </clipPath>
+    <!-- Feuille de persil : limbe a trois lobes + nervures. Base a l'origine, pointe vers le haut. -->
+    <g id="carotte-feuille">
+      <path d="M0 0C-70 -30 -150 -80 -175 -135C-185 -180 -105 -200 -52 -160C-70 -215 -48 -262 0 -300C48 -262 70 -215 52 -160C105 -200 185 -180 175 -135C150 -80 70 -30 0 0Z"
+            fill="#9CBF4A" stroke="#303D1C" stroke-width="22" stroke-linejoin="round" stroke-linecap="round"/>
+      <g stroke="#819D44" stroke-width="14" fill="none" stroke-linecap="round">
+        <path d="M0 -12V-258"/>
+        <path d="M0 -70C-46 -92 -110 -120 -152 -140"/><path d="M0 -70C46 -92 110 -120 152 -140"/>
+        <path d="M0 -172C-22 -182 -40 -188 -58 -190"/><path d="M0 -172C22 -182 40 -188 58 -190"/>
+        <path d="M0 -238C-14 -244 -24 -250 -34 -258"/><path d="M0 -238C14 -244 24 -250 34 -258"/>
+      </g>
+    </g>
+  </defs>
+
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Fanes : trois feuilles sur de courtes tiges, derriere la racine -->
+    <g id="fanes">
+      <g stroke="#303D1C" stroke-width="48">
+        <path d="M1330 436C1420 400 1490 384 1545 370"/>
+        <path d="M1350 502C1440 500 1520 500 1585 500"/>
+        <path d="M1335 574C1420 606 1490 632 1545 650"/>
+      </g>
+      <g stroke="#819D44" stroke-width="21">
+        <path d="M1330 436C1420 400 1490 384 1545 370"/>
+        <path d="M1350 502C1440 500 1520 500 1585 500"/>
+        <path d="M1335 574C1420 606 1490 632 1545 650"/>
+      </g>
+      <use href="#carotte-feuille" transform="translate(1545 370) rotate(28) scale(.92)"/>
+      <use href="#carotte-feuille" transform="translate(1585 500) rotate(80) scale(.92)"/>
+      <use href="#carotte-feuille" transform="translate(1545 650) rotate(130) scale(.92)"/>
+    </g>
+
+    <!-- Racine -->
+    <path fill="#FF8C11" d="M250 880C500 720 1030 438 1303 349C1544 273 1658 635 1417 711C1200 856 495 822 250 880Z"/>
+    <g clip-path="url(#carotte-corps)">
+      <path fill="#FA7104" d="M1490 660C1260 838 760 890 260 900L200 990H1560Z"/>
+    </g>
+    <path stroke="#1F1E1B" stroke-width="22" d="M250 880C500 720 1030 438 1303 349C1544 273 1658 635 1417 711C1200 856 495 822 250 880Z"/>
+
+    <!-- Nervures transversales -->
+    <g stroke="#984D16" stroke-width="13">
+      <path d="M469 800Q467 838 490 868"/>
+      <path d="M601 755Q602 808 628 852"/>
+      <path d="M735 712Q737 764 764 807"/>
+      <path d="M867 668Q871 734 900 791"/>
+      <path d="M1000 625Q1005 686 1036 739"/>
+      <path d="M1133 582Q1139 645 1170 700"/>
+      <path d="M1244 548Q1249 608 1279 660"/>
+    </g>
+  </g>
+</svg>

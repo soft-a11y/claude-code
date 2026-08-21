@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 1152" width="2048" height="1152" role="img" aria-labelledby="titre">
+  <title id="titre">Fruits</title>
+  <defs>
+    <clipPath id="fruits-orange"><circle cx="420" cy="566" r="204"/></clipPath>
+    <clipPath id="fruits-pomme"><path d="M860 332C910 288 990 280 1040 306C1110 342 1138 448 1130 552C1120 690 1040 800 945 812C905 817 878 800 860 786C842 800 815 817 775 812C680 800 600 690 590 552C582 448 610 342 680 306C730 280 810 288 860 332Z"/></clipPath>
+    <clipPath id="fruits-fraise"><path d="M1500 452C1606 452 1666 524 1666 612C1666 728 1584 848 1500 892C1416 848 1334 728 1334 612C1334 524 1394 452 1500 452Z"/></clipPath>
+    <clipPath id="fruits-banane"><path d="M330 846C318 992 486 1094 726 1102C950 1110 1140 1040 1226 932C1258 890 1212 832 1172 860C1078 930 934 962 782 954C638 946 508 890 448 806C412 756 340 776 330 846Z"/></clipPath>
+    <!-- Sepale de fraise, pointe vers le haut, ancre a l'origine -->
+    <path id="fruits-sepale" d="M0 0C-34 -30 -42 -92 0 -150C42 -92 34 -30 0 0Z"/>
+  </defs>
+
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" transform="translate(140 -10)">
+
+    <!-- Agrume -->
+    <g id="agrume">
+      <path fill="#87B452" stroke="#2A4B1A" stroke-width="16" d="M436 374C496 316 594 320 632 360C594 432 490 438 436 374Z"/>
+      <path stroke="#2A4B1A" stroke-width="12" d="M456 384C506 380 566 376 610 368"/>
+      <circle cx="420" cy="566" r="204" fill="#FF8C11"/>
+      <g clip-path="url(#fruits-orange)">
+        <path fill="#E0700A" d="M498 388C578 486 590 668 508 776L700 800V360Z"/>
+        <path fill="#FFB45C" d="M290 512C296 456 340 412 392 406C414 404 422 428 404 436C362 454 334 494 328 540C324 572 286 566 290 512Z"/>
+      </g>
+      <circle cx="420" cy="566" r="204" stroke="#3A2208" stroke-width="16"/>
+    </g>
+
+    <!-- Fraise -->
+    <g id="fraise" transform="translate(-150 60)">
+      <path stroke="#3F6B26" stroke-width="26" d="M1500 496C1502 444 1498 408 1488 376"/>
+      <g fill="#6E9C3C" stroke="#2A4B1A" stroke-width="16">
+        <use href="#fruits-sepale" transform="translate(1500 528) rotate(-72)"/>
+        <use href="#fruits-sepale" transform="translate(1500 528) rotate(-36)"/>
+        <use href="#fruits-sepale" transform="translate(1500 528)"/>
+        <use href="#fruits-sepale" transform="translate(1500 528) rotate(36)"/>
+        <use href="#fruits-sepale" transform="translate(1500 528) rotate(72)"/>
+      </g>
+      <path fill="#E8402F" d="M1500 452C1606 452 1666 524 1666 612C1666 728 1584 848 1500 892C1416 848 1334 728 1334 612C1334 524 1394 452 1500 452Z"/>
+      <g clip-path="url(#fruits-fraise)">
+        <path fill="#B72A24" d="M1576 456C1636 592 1614 786 1500 906L1710 930V430Z"/>
+        <g fill="#FBE29A">
+          <ellipse cx="1440" cy="580" rx="11" ry="15"/><ellipse cx="1500" cy="564" rx="11" ry="15"/><ellipse cx="1560" cy="584" rx="11" ry="15"/>
+          <ellipse cx="1406" cy="646" rx="11" ry="15"/><ellipse cx="1466" cy="630" rx="11" ry="15"/><ellipse cx="1526" cy="634" rx="11" ry="15"/><ellipse cx="1586" cy="652" rx="11" ry="15"/>
+          <ellipse cx="1426" cy="712" rx="11" ry="15"/><ellipse cx="1488" cy="700" rx="11" ry="15"/><ellipse cx="1550" cy="712" rx="11" ry="15"/>
+          <ellipse cx="1454" cy="776" rx="11" ry="15"/><ellipse cx="1516" cy="776" rx="11" ry="15"/>
+          <ellipse cx="1488" cy="836" rx="11" ry="15"/>
+        </g>
+      </g>
+      <path stroke="#2A1210" stroke-width="16" d="M1500 452C1606 452 1666 524 1666 612C1666 728 1584 848 1500 892C1416 848 1334 728 1334 612C1334 524 1394 452 1500 452Z"/>
+    </g>
+
+    <!-- Pomme -->
+    <g id="pomme">
+      <path stroke="#6B4522" stroke-width="32" d="M860 336C866 282 862 238 850 202"/>
+      <path fill="#87B452" stroke="#2A4B1A" stroke-width="16" d="M868 230C946 164 1064 172 1108 220C1064 308 936 314 868 230Z"/>
+      <path stroke="#2A4B1A" stroke-width="12" d="M888 248C942 244 1018 240 1078 232"/>
+      <path fill="#E2382C" d="M860 332C910 288 990 280 1040 306C1110 342 1138 448 1130 552C1120 690 1040 800 945 812C905 817 878 800 860 786C842 800 815 817 775 812C680 800 600 690 590 552C582 448 610 342 680 306C730 280 810 288 860 332Z"/>
+      <g clip-path="url(#fruits-pomme)">
+        <path fill="#B62B22" d="M1000 280C1090 420 1096 660 980 830L1200 860V260Z"/>
+        <path fill="#F2705F" d="M700 452C706 390 754 340 812 332C838 328 848 354 828 370C780 392 748 438 742 490C738 526 696 516 700 452Z"/>
+      </g>
+      <path stroke="#2A1210" stroke-width="16" d="M860 332C910 288 990 280 1040 306C1110 342 1138 448 1130 552C1120 690 1040 800 945 812C905 817 878 800 860 786C842 800 815 817 775 812C680 800 600 690 590 552C582 448 610 342 680 306C730 280 810 288 860 332Z"/>
+    </g>
+
+    <!-- Banane -->
+    <g id="banane">
+      <path fill="#FBD24E" d="M330 846C318 992 486 1094 726 1102C950 1110 1140 1040 1226 932C1258 890 1212 832 1172 860C1078 930 934 962 782 954C638 946 508 890 448 806C412 756 340 776 330 846Z"/>
+      <g clip-path="url(#fruits-banane)">
+        <path fill="#E0AE2C" d="M280 1010C480 1104 900 1116 1200 976L1240 1160H280Z"/>
+        <path stroke="#FDE8A0" stroke-width="30" d="M470 906C630 964 880 984 1090 934"/>
+        <circle cx="366" cy="812" r="58" fill="#6E4A16"/>
+        <circle cx="1214" cy="898" r="54" fill="#6E4A16"/>
+      </g>
+      <path stroke="#33270D" stroke-width="16" d="M330 846C318 992 486 1094 726 1102C950 1110 1140 1040 1226 932C1258 890 1212 832 1172 860C1078 930 934 962 782 954C638 946 508 890 448 806C412 756 340 776 330 846Z"/>
+    </g>
+
+  </g>
+</svg>
