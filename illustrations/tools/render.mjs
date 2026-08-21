@@ -6,13 +6,13 @@ import { join, basename } from 'node:path'
 
 const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'
 const root = new URL('../..', import.meta.url).pathname
-const svgDir = join(root, 'illustrations/svg')
+const dirs = ['illustrations/svg', 'illustrations/brouillons'].map((d) => join(root, d))
 const outDir = join(root, 'illustrations/tools/out')
 mkdirSync(outDir, { recursive: true })
 
 const only = process.argv.slice(2)
-const files = readdirSync(svgDir)
-  .filter((f) => f.endsWith('.svg'))
+const files = dirs
+  .flatMap((d) => readdirSync(d).filter((f) => f.endsWith('.svg')).map((f) => join(d, f)))
   .filter((f) => only.length === 0 || only.includes(basename(f, '.svg')))
   .sort()
 
@@ -23,7 +23,7 @@ const rows = Math.ceil(files.length / cols)
 
 const cards = files
   .map((f) => {
-    const svg = readFileSync(join(svgDir, f), 'utf8')
+    const svg = readFileSync(f, 'utf8')
     return `<figure><div class="art">${svg}</div><figcaption>${basename(f, '.svg')}</figcaption></figure>`
   })
   .join('\n')
