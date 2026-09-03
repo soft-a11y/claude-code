@@ -109,9 +109,18 @@ Dans le champ `prompt`, `{nom}` est remplacé par le nom de la frame Figma :
 chaque illustration reçoit donc son propre prompt (« Carrots, flat vector food
 illustration… ») sans que vous ayez à les écrire à la main.
 
-Pour ajouter une recette, copiez un bloc de `recettes` et changez `endpoint` et
-`params`. Tout point d'entrée Magnific en `/v1/ai/<endpoint>` qui suit le schéma
-POST → `task_id` → GET fonctionne tel quel — `image-style-transfer`, par exemple.
+Chaque recette porte deux jeux de réglages, parce que **l'outil MCP et l'API
+REST ne nomment pas les paramètres pareil** : `params` pour la voie REST
+(`scale_factor`, `optimized_for: "art_n_illustration"`), `mcp.params` pour la
+voie MCP (`scale`, `optimised: "ArtAndIllustration"`, `mode: "creative"`).
+`exporter` écrit dans le carnet la version MCP, `lancer` envoie la version REST.
+
+Attention si vous les recopiez l'un vers l'autre : les curseurs Precision n'ont
+pas la même échelle par défaut (REST `sharpen` vaut 50, MCP `sharpness` vaut 7).
+
+Pour ajouter une recette, copiez un bloc de `recettes`. Côté REST, tout point
+d'entrée en `/v1/ai/<endpoint>` qui suit le schéma POST → `task_id` → GET
+fonctionne tel quel — `image-style-transfer`, par exemple.
 
 Les réglages `creativity`, `hdr`, `resemblance` et `fractality` vont de −10 à
 +10. Sur des aplats vectoriels, `smart_grain` est laissé à 0 : le grain se voit
@@ -138,7 +147,13 @@ Chaque génération débite le compte Magnific. Deux réflexes :
 - `--sec` et `--seulement <nom>` avant le lot complet ;
 - sur la voie MCP, `account_balance` et surtout le champ `unlimitedAppliesHere` :
   s'il vaut `false`, un plan illimité ne couvre pas les appels MCP et chaque
-  génération est facturée.
+  génération est facturée. `simulate_cost` chiffre un appel sans rien débiter.
+
+Le coût d'un agrandissement dépend de la taille de **sortie**, par paliers
+(S / M / L / XL). Sur une source de 1600 px en `2x`, la sortie fait 3200 px et
+tombe dans les paliers hauts. Passer `figma.echelle` à `0.5` — source 800 px,
+sortie 1600 px — descend d'un ou deux paliers : vous gardez le gain de matière
+sans payer la taille.
 
 Un passage interrompu est repris à partir des `task_id` enregistrés dans
 `etat.json` : les tâches déjà payées sont récupérées, pas relancées.

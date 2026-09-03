@@ -358,8 +358,7 @@ async function commandeExporter(config, options) {
   const carnet = {
     genere: new Date().toISOString(),
     recette: config.recette,
-    endpoint: p.recette.endpoint,
-    outilMcp: p.recette.outilMcp ?? 'images_upscale',
+    outil: p.recette.mcp?.outil ?? 'images_upscale',
     dossierSource: rel(p.dossierSource),
     dossierRendu: rel(p.dossierRendu),
     taches: p.choix.map((f) => {
@@ -370,7 +369,8 @@ async function commandeExporter(config, options) {
         nodeId: f.id,
         source: rel(join(p.dossierSource, `${nom}.${p.format}`)),
         rendu: rel(join(p.dossierRendu, `${nom}.png`)),
-        params: paramsPour(p.recette, f),
+        // Nommage de l'outil MCP, qui diffère de celui de l'API REST.
+        params: paramsPour({ params: p.recette.mcp?.params ?? p.recette.params }, f),
       }
     }),
   }

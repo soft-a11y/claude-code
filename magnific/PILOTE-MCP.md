@@ -30,28 +30,44 @@ Pour lancer, il suffit de dire à Claude Code : **« Suis magnific/PILOTE-MCP.md
    demande validation avant de lancer le reste. Un lot de quarante mal réglé,
    ce sont quarante crédits perdus.
 
-4. **Pour chaque tâche :**
-   - téléverse `source` (`creations_request_upload` → `creations_upload` →
-     `creations_finalize_upload`) ;
-   - appelle l'outil nommé dans `outilMcp` (`images_upscale` par défaut) avec
-     l'image téléversée et les `params` de la tâche ;
-   - attends la fin avec `creations_wait` (ou `creation_status` en boucle) ;
+4. **Estimer avant de dépenser.** `simulate_cost` avec `tool: "images_upscale"`
+   et les mêmes arguments : il ne facture rien. Le coût dépend de la taille de
+   sortie, par paliers (S / M / L / XL). Multiplie par le nombre de tâches et
+   compare au solde avant d'engager le lot.
+
+5. **Pour chaque tâche :**
+   - téléverse `source` (`creations_request_upload` → `creations_finalize_upload` ;
+     `creations_upload_image` ne prend qu'une URL publique) ;
+   - appelle l'outil nommé dans `outil` (`images_upscale`) avec le
+     `creationIdentifier` obtenu et les `params` de la tâche ;
+   - attends la fin avec `creations_wait` (1 à 8 identifiants par appel) ;
    - enregistre le résultat dans le chemin `rendu` de la tâche.
 
-   Les `params` du carnet suivent le nommage de l'API REST Magnific
-   (`scale_factor`, `optimized_for`, `engine`, `creativity`, `hdr`,
-   `resemblance`, `fractality`, `prompt`). Le schéma de l'outil MCP peut
-   différer : **lis le schéma exposé par `tools/list` et fais la correspondance**
-   plutôt que de recopier les clés à l'aveugle. Signale toute option que tu n'as
-   pas pu transmettre.
+   Les `params` du carnet sont **déjà au nommage MCP**, qui n'est pas celui de
+   l'API REST. Pour mémoire, si vous comparez les deux :
 
-5. **Ne refais pas le travail déjà fait.** Si le fichier `rendu` existe déjà,
+   | API REST | outil MCP |
+   |---|---|
+   | `scale_factor` | `scale` |
+   | `optimized_for: "art_n_illustration"` | `optimised: "ArtAndIllustration"` |
+   | `/v1/ai/image-upscaler` | `mode: "creative"` |
+   | `/v1/ai/image-upscaler-precision` | `mode: "ultra-sublime"` (ou `ultra-photo`) |
+   | `sharpen`, `smart_grain`, `ultra_detail` | `sharpness`, `grain`, `ultraDetail` |
+
+   Attention : les curseurs Precision n'ont pas la même échelle par défaut d'un
+   côté et de l'autre (REST `sharpen` vaut 50 par défaut, MCP `sharpness` vaut 7).
+   Ne transposez pas les valeurs d'un nommage à l'autre.
+
+   Vérifie tout de même le schéma vivant avec `images_upscale_modes_list` avant
+   le lot, et signale toute option que tu n'as pas pu transmettre.
+
+6. **Ne refais pas le travail déjà fait.** Si le fichier `rendu` existe déjà,
    passe la tâche — sauf demande explicite de refaire.
 
-6. **Y aller doucement.** Trois tâches en parallèle au plus, pour ne pas
+7. **Y aller doucement.** Trois tâches en parallèle au plus, pour ne pas
    saturer le compte.
 
-7. **Rendre compte à la fin :** ce qui est passé, ce qui a échoué et pourquoi,
+8. **Rendre compte à la fin :** ce qui est passé, ce qui a échoué et pourquoi,
    et le solde de crédits restant.
 
 ## Garde-fous

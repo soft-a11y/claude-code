@@ -8,23 +8,28 @@
   "sortie": "magnific/sortie",
   "concurrence": 3,
   "recette": "illustration-detaillee",
-
   "recettes": {
     "net-fidele": {
       "_": "Agrandissement fidèle : plus grand et plus net, sans rien inventer.",
       "endpoint": "image-upscaler-precision",
-      "outilMcp": "images_upscale",
       "params": {
         "sharpen": 60,
         "smart_grain": 0,
         "ultra_detail": 20
+      },
+      "mcp": {
+        "outil": "images_upscale",
+        "params": {
+          "mode": "ultra-sublime",
+          "scale": "2x",
+          "sharpness": 12,
+          "grain": 0
+        }
       }
     },
-
     "illustration-detaillee": {
       "_": "Garde le trait et les aplats, ajoute matière et relief.",
       "endpoint": "image-upscaler",
-      "outilMcp": "images_upscale",
       "params": {
         "scale_factor": "2x",
         "optimized_for": "art_n_illustration",
@@ -34,13 +39,26 @@
         "resemblance": 6,
         "fractality": 0,
         "prompt": "{nom}, flat vector food illustration, thick black outline, clean flat colours, plain white background"
+      },
+      "mcp": {
+        "outil": "images_upscale",
+        "params": {
+          "mode": "creative",
+          "scale": "2x",
+          "presets": "custom",
+          "optimised": "ArtAndIllustration",
+          "engine": "magnific_illusio",
+          "creativity": 1,
+          "resemblance": 6,
+          "hdr": 3,
+          "fractality": 0,
+          "prompt": "{nom}, flat vector food illustration, thick black outline, clean flat colours, plain white background"
+        }
       }
     },
-
     "illustration-realiste": {
       "_": "Pousse l'illustration vers un rendu photo. Change beaucoup l'image.",
       "endpoint": "image-upscaler",
-      "outilMcp": "images_upscale",
       "params": {
         "scale_factor": "2x",
         "optimized_for": "standard",
@@ -50,6 +68,21 @@
         "resemblance": -2,
         "fractality": 2,
         "prompt": "{nom}, appetizing food, studio product photography, soft daylight, plain white background, high detail"
+      },
+      "mcp": {
+        "outil": "images_upscale",
+        "params": {
+          "mode": "creative",
+          "scale": "2x",
+          "presets": "custom",
+          "optimised": "StandardUltra",
+          "engine": "magnific_sparkle",
+          "creativity": 6,
+          "resemblance": -2,
+          "hdr": 6,
+          "fractality": 2,
+          "prompt": "{nom}, appetizing food, studio product photography, soft daylight, plain white background, high detail"
+        }
       }
     }
   }
