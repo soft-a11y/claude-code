@@ -193,6 +193,11 @@ def en_svg(aplats, silhouette, details, noms, couleurs, contour, opt):
 
     # 3. Le dessin intérieur — hachures, stries, séparations entre aplats. À zéro,
     #    l'illustration ne garde que sa silhouette cernée et ses aplats nus.
+    # L'épaisseur est donnée en unités du dessin fini, pas en pixels de la source :
+    # un rendu 1024 et un rendu 2048 doivent produire le même trait une fois
+    # exportés. On la ramène donc dans le repère du viewBox.
+    trait = opt.trait * w / opt.taille
+    trait_fin = opt.trait_fin * w / opt.taille
     commun = (f'fill="none" stroke="{contour}" stroke-linejoin="round" '
               f'stroke-linecap="round"')
     if opt.trait_fin > 0:
@@ -203,11 +208,11 @@ def en_svg(aplats, silhouette, details, noms, couleurs, contour, opt):
         for i, _ in presents[1:]:
             interieurs += contours(aplats == i, opt.tolerance, opt.lissage, aire_min)
         if interieurs:
-            out.append(f'<g id="trait-interieur" {commun} stroke-width="{opt.trait_fin}">'
+            out.append(f'<g id="trait-interieur" {commun} stroke-width="{trait_fin:.2f}">'
                        f'<path d="{"".join(interieurs)}"/></g>')
 
     # 4. Le contour, reconstruit à épaisseur constante — jamais décalqué.
-    out.append(f'<g id="trait-contour" {commun} stroke-width="{opt.trait}">'
+    out.append(f'<g id="trait-contour" {commun} stroke-width="{trait:.2f}">'
                f'<path d="{"".join(fondations)}"/></g>')
 
     out.append("</svg>")
