@@ -1,28 +1,72 @@
 {
-  "_": "Palette d'illustration Mezze. `marque` reprend la charte telle quelle ; `derivee` complète ce que la charte ne couvre pas mais que l'alimentaire exige.",
+  "_": "Palette d'illustration Mezze. Chaque cran porte sa provenance : `charte` vient des guidelines, `relevé` est mesuré dans les SVG des illustrations existantes, `dérivé` est calculé depuis la base en TSL. Les crans relevés priment : ils sont les couleurs réellement employées, pas une approximation.",
 
   "contour": "#1E1E1D",
   "fond": "#FFFFFF",
 
   "familles": {
-    "rouge":  { "source": "marque", "base": "#F33A18" },
-    "orange": { "source": "marque", "base": "#FF8C11" },
-    "jaune":  { "source": "marque", "base": "#FFD82D" },
-    "bleu":   { "source": "marque", "base": "#0049DF" },
-    "ciel":   { "source": "marque", "base": "#82C9F9", "role": "accent" },
-    "rose":   { "source": "marque", "base": "#F8BDE0", "role": "accent" },
-    "creme":  { "source": "marque", "base": "#FAEFDF" },
+    "rouge": {
+      "_": "Tomate, fraise, poivron, viande crue.",
+      "ombre":   { "couleur": "#B00D18", "source": "dérivé" },
+      "base":    { "couleur": "#F33A18", "source": "charte" },
+      "lumiere": { "couleur": "#FF7E62", "source": "dérivé" }
+    },
 
-    "vert": { "source": "derivee", "base": "#78A337",
-              "_": "Légumes verts. Repris des illustrations existantes, la teinte la plus employée." },
-    "brun": { "source": "derivee", "base": "#B75F18",
-              "_": "Pains, viandes, café. Voisin direct de l'orange de marque, donc s'accorde d'office." }
-  },
+    "orange": {
+      "_": "Carotte, agrumes, cheddar, courge. La base est déjà celle de la carotte existante.",
+      "ombre":   { "couleur": "#A65A1D", "source": "relevé" },
+      "base":    { "couleur": "#FF8C11", "source": "charte + relevé" },
+      "lumiere": { "couleur": "#FFB55F", "source": "dérivé" }
+    },
 
-  "paliers": {
-    "_": "Chaque famille se décline en trois paliers, calculés depuis la base en HSL.",
-    "ombre":   { "clarte": 0.62, "saturation": 1.08 },
-    "base":    { "clarte": 1.0,  "saturation": 1.0 },
-    "lumiere": { "clarte": 1.35, "saturation": 0.92 }
+    "jaune": {
+      "_": "Banane, citron, beurre, œuf, maïs.",
+      "ombre":   { "couleur": "#AF9A09", "source": "relevé" },
+      "base":    { "couleur": "#FFD82D", "source": "charte" },
+      "lumiere": { "couleur": "#FFE988", "source": "dérivé" }
+    },
+
+    "vert": {
+      "_": "Légumes, herbes, feuillages. Absente de la charte : les trois crans sont relevés.",
+      "ombre":   { "couleur": "#194C1F", "source": "relevé" },
+      "base":    { "couleur": "#78A337", "source": "relevé" },
+      "lumiere": { "couleur": "#9CBF4A", "source": "relevé" }
+    },
+
+    "brun": {
+      "_": "Pains, viandes, café, chocolat, fruits secs. Voisine directe de l'orange de marque.",
+      "ombre":   { "couleur": "#793E14", "source": "relevé" },
+      "base":    { "couleur": "#B75F18", "source": "relevé" },
+      "lumiere": { "couleur": "#EAA955", "source": "relevé" }
+    },
+
+    "bleu": {
+      "_": "Lait, eau, poisson, emballages. La lumière est le bleu ciel de la charte.",
+      "ombre":   { "couleur": "#00368F", "source": "dérivé" },
+      "base":    { "couleur": "#0049DF", "source": "charte" },
+      "lumiere": { "couleur": "#82C9F9", "source": "charte" }
+    },
+
+    "violet": {
+      "_": "Aubergine, myrtille, raisin, chou rouge, figue. Absente de la charte : les trois crans sortent de l'aubergine existante.",
+      "ombre":   { "couleur": "#3C1649", "source": "relevé" },
+      "base":    { "couleur": "#5E246E", "source": "relevé" },
+      "lumiere": { "couleur": "#77378A", "source": "relevé" }
+    },
+
+    "rose": {
+      "_": "Jambon, bacon, crevette. La charte la donne comme accent : à ne pas prendre pour l'aplat dominant d'une illustration.",
+      "role": "accent",
+      "ombre":   { "couleur": "#D9779F", "source": "dérivé" },
+      "base":    { "couleur": "#F8BDE0", "source": "charte · accent" },
+      "lumiere": { "couleur": "#FDDCEE", "source": "dérivé" }
+    },
+
+    "creme": {
+      "_": "Fonds, laitages, farines, pâtes crues, os et coquilles.",
+      "ombre":   { "couleur": "#E3D2B8", "source": "dérivé" },
+      "base":    { "couleur": "#FAEFDF", "source": "charte" },
+      "lumiere": { "couleur": "#FFFFFF", "source": "fond" }
+    }
   }
 }

@@ -14,7 +14,6 @@ illustrations d'origine, où le contour est régulier d'un bout à l'autre.
 """
 
 import argparse
-import colorsys
 import json
 import signal
 import sys
@@ -39,15 +38,6 @@ def hex_vers_rvb(h):
     return tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
 
 
-def decliner(base, clarte, saturation):
-    """Décline une teinte de marque en ombre ou en lumière, sans la dénaturer."""
-    r, g, b = (c / 255 for c in hex_vers_rvb(base))
-    h, l, s = colorsys.rgb_to_hls(r, g, b)
-    l = min(1.0, max(0.0, l * clarte))
-    s = min(1.0, s * saturation)
-    return "#%02X%02X%02X" % tuple(round(c * 255) for c in colorsys.hls_to_rgb(h, l, s))
-
-
 def construire_palette(chemin, familles=None):
     """Déplie le fichier de palette en emplacements nommés → couleur.
 
@@ -66,13 +56,14 @@ def construire_palette(chemin, familles=None):
     retenues = d["familles"] if familles is None else {
         k: v for k, v in d["familles"].items() if k in familles
     }
+    # Les crans sont écrits en clair dans la palette, pas recalculés : beaucoup
+    # sont relevés dans les illustrations existantes, et un calcul les
+    # remplacerait par des approximations.
     couleurs = {}
     for nom, fam in retenues.items():
-        for palier, reglage in d["paliers"].items():
-            if not palier.startswith("_"):
-                couleurs[f"{nom}-{palier}"] = decliner(
-                    fam["base"], reglage["clarte"], reglage["saturation"]
-                )
+        for palier, valeur in fam.items():
+            if isinstance(valeur, dict) and "couleur" in valeur:
+                couleurs[f"{nom}-{palier}"] = valeur["couleur"]
     return couleurs, d["contour"], d["fond"]
 
 
