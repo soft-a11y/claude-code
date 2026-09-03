@@ -72,3 +72,11 @@ temps réel : une boucle de 20 s prend 20 s.
 
 Publié comme Artifact, le téléchargement passe par la capacité `downloads` de l'hôte ;
 ouvert en local ou hébergé, il passe par un lien de téléchargement classique.
+
+---
+
+## Autres outils du dépôt
+
+- `figma-plugin/` — Prisme en plugin Figma.
+- `magnific/` — passer une page d'illustrations Figma dans Magnific en lot,
+  par clé API ou par le MCP Magnific. Voir [`magnific/README.md`](magnific/README.md).
