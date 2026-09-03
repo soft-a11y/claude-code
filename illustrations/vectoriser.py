@@ -200,21 +200,22 @@ def en_svg(aplats, silhouette, details, noms, couleurs, contour, opt):
             out.append(f'<g id="{nom}" fill="{couleurs[nom]}">'
                        f'<path fill-rule="evenodd" d="{"".join(chemins)}"/></g>')
 
-    # 3. Les traits de détail mis de côté, repeints tels quels.
-    if chemins := contours(details, opt.tolerance, max(1, opt.lissage - 1), aire_min / 6):
-        out.append(f'<g id="trait-detail" fill="{contour}">'
-                   f'<path fill-rule="evenodd" d="{"".join(chemins)}"/></g>')
-
-    # 4. Le trait, reconstruit à épaisseur constante — jamais décalqué.
-    #    D'abord les séparations internes, plus fines, puis la silhouette.
-    interieurs = []
-    for i, _ in presents[1:]:
-        interieurs += contours(aplats == i, opt.tolerance, opt.lissage, aire_min)
+    # 3. Le dessin intérieur — hachures, stries, séparations entre aplats. À zéro,
+    #    l'illustration ne garde que sa silhouette cernée et ses aplats nus.
     commun = (f'fill="none" stroke="{contour}" stroke-linejoin="round" '
               f'stroke-linecap="round"')
-    if interieurs:
-        out.append(f'<g id="trait-interieur" {commun} stroke-width="{opt.trait_fin}">'
-                   f'<path d="{"".join(interieurs)}"/></g>')
+    if opt.trait_fin > 0:
+        if chemins := contours(details, opt.tolerance, max(1, opt.lissage - 1), aire_min / 6):
+            out.append(f'<g id="trait-detail" fill="{contour}">'
+                       f'<path fill-rule="evenodd" d="{"".join(chemins)}"/></g>')
+        interieurs = []
+        for i, _ in presents[1:]:
+            interieurs += contours(aplats == i, opt.tolerance, opt.lissage, aire_min)
+        if interieurs:
+            out.append(f'<g id="trait-interieur" {commun} stroke-width="{opt.trait_fin}">'
+                       f'<path d="{"".join(interieurs)}"/></g>')
+
+    # 4. Le contour, reconstruit à épaisseur constante — jamais décalqué.
     out.append(f'<g id="trait-contour" {commun} stroke-width="{opt.trait}">'
                f'<path d="{"".join(fondations)}"/></g>')
 
@@ -233,8 +234,10 @@ def main():
                                       "(ex. jaune,vert pour un citron)")
     a.add_argument("--tolerance", type=float, default=2.0, help="simplification, en pixels")
     a.add_argument("--lissage", type=int, default=3, help="passes d'arrondi des angles")
-    a.add_argument("--trait", type=float, default=11.0, help="épaisseur du contour")
-    a.add_argument("--trait-fin", type=float, default=5.0, help="épaisseur des traits internes")
+    a.add_argument("--trait", type=float, default=26.0,
+                   help="épaisseur du contour ; 26 est la médiane relevée sur la série")
+    a.add_argument("--trait-fin", type=float, default=0.0,
+                   help="épaisseur du dessin intérieur ; 0 pour n'en garder aucun")
     a.add_argument("--miettes", type=float, default=0.0004,
                    help="aire minimale d'une forme, en fraction de l'image")
     a.add_argument("--adoucir", type=int, default=3, help="rayon du vote anti-semis, 0 pour couper")
