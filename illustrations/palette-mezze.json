@@ -1,0 +1,28 @@
+{
+  "_": "Palette d'illustration Mezze. `marque` reprend la charte telle quelle ; `derivee` complète ce que la charte ne couvre pas mais que l'alimentaire exige.",
+
+  "contour": "#1E1E1D",
+  "fond": "#FFFFFF",
+
+  "familles": {
+    "rouge":  { "source": "marque", "base": "#F33A18" },
+    "orange": { "source": "marque", "base": "#FF8C11" },
+    "jaune":  { "source": "marque", "base": "#FFD82D" },
+    "bleu":   { "source": "marque", "base": "#0049DF" },
+    "ciel":   { "source": "marque", "base": "#82C9F9", "role": "accent" },
+    "rose":   { "source": "marque", "base": "#F8BDE0", "role": "accent" },
+    "creme":  { "source": "marque", "base": "#FAEFDF" },
+
+    "vert": { "source": "derivee", "base": "#78A337",
+              "_": "Légumes verts. Repris des illustrations existantes, la teinte la plus employée." },
+    "brun": { "source": "derivee", "base": "#B75F18",
+              "_": "Pains, viandes, café. Voisin direct de l'orange de marque, donc s'accorde d'office." }
+  },
+
+  "paliers": {
+    "_": "Chaque famille se décline en trois paliers, calculés depuis la base en HSL.",
+    "ombre":   { "clarte": 0.62, "saturation": 1.08 },
+    "base":    { "clarte": 1.0,  "saturation": 1.0 },
+    "lumiere": { "clarte": 1.35, "saturation": 0.92 }
+  }
+}
