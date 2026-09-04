@@ -6,10 +6,12 @@ chacun sous-titré. Pour les verser dans Figma au format des illustrations
 existantes, il faut les séparer — et laisser la légende de côté, puisque le nom
 est déjà connu par le prompt.
 
-Les bandes horizontales non blanches donnent les rangées ; dans chaque rangée,
-la légende se reconnaît à son absence de couleur et se retire ; les bandes
-verticales donnent alors les colonnes. Les noms sont attribués dans l'ordre de
-lecture, celui du prompt.
+Le découpage ne se fie pas aux intervalles blancs : d'une planche à l'autre ils
+vont de 75 pixels à 20, et un seuil qui marche ici fait fusionner toutes les
+rangées là. Il passe par les formes elles-mêmes — chaque tache d'encre est
+isolée, les légendes sont écartées parce qu'elles ne portent aucune couleur et
+qu'elles sont basses, puis les taches restantes sont regroupées en grille par
+leurs centres. Les noms sont attribués dans l'ordre de lecture, celui du prompt.
 
     python3 illustrations/decouper.py planche.png --noms "Oignon,Ail,..." -o vignettes/
 """
@@ -22,6 +24,8 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
+from skimage.measure import label, regionprops
+from skimage.morphology import dilation, disk
 
 SEUIL_BLANC = 235
 
@@ -32,82 +36,90 @@ def slug(nom):
     return "".join(c if c.isalnum() else "-" for c in base).strip("-").replace("--", "-") or "sans-nom"
 
 
-def bandes(presence, ecart_min):
-    """Regroupe les indices occupés en bandes, en tolérant les petits trous."""
-    (occupes,) = np.where(presence)
-    if occupes.size == 0:
-        return []
-    coupures = np.where(np.diff(occupes) > ecart_min)[0]
-    debuts = np.r_[occupes[0], occupes[coupures + 1]]
-    fins = np.r_[occupes[coupures], occupes[-1]]
-    return list(zip(debuts, fins))
-
-
-def separer_legende(rvb_rangee, masque_rangee):
-    """Rend la hauteur où s'arrêtent les dessins, avant la légende.
-
-    Ni l'espace blanc ni la noirceur ne tranchent : dans une rangée les dessins
-    n'ont pas la même hauteur, si bien que l'intervalle sous le plus haut est
-    plus large que celui qui précède la légende ; et l'anticrénelage du texte
-    laisse assez de gris pour brouiller un critère de noir pur.
-
-    Ce qui sépare vraiment, c'est la couleur. Une ligne de légende n'en porte
-    aucune, un dessin en porte toujours — une rangée entière de dessins sans le
-    moindre pixel saturé n'existe pas dans ces planches.
-    """
-    sature = (rvb_rangee.max(axis=2) - rvb_rangee.min(axis=2)) > 30
-    encre = masque_rangee.sum(axis=1)
-    part_coloree = np.divide(np.logical_and(sature, masque_rangee).sum(axis=1), encre,
-                             out=np.zeros(encre.shape, dtype=float), where=encre > 0)
-    grise = part_coloree < 0.08
-
-    bas = len(encre) - 1
-    while bas >= 0 and encre[bas] == 0:
-        bas -= 1
-    if bas < 0 or not grise[bas]:
-        return masque_rangee.shape[0]   # pas de légende sous cette rangée
-
-    haut = bas
-    while haut > 0 and (encre[haut - 1] == 0 or grise[haut - 1]):
-        haut -= 1
-    return haut
+def grouper(centres, ecart_min):
+    """Range des positions en groupes, en coupant sur les grands écarts."""
+    ordre = sorted(range(len(centres)), key=lambda i: centres[i])
+    groupes, courant = [], [ordre[0]]
+    for precedent, i in zip(ordre, ordre[1:]):
+        if centres[i] - centres[precedent] > ecart_min:
+            groupes.append(courant)
+            courant = []
+        courant.append(i)
+    groupes.append(courant)
+    return groupes
 
 
 def decouper(image, noms, cote, marge):
     a = np.asarray(image.convert("RGB"), dtype=np.int16)
     masque = a.min(axis=2) < SEUIL_BLANC
+    sature = (a.max(axis=2) - a.min(axis=2)) > 30
     h, w = masque.shape
 
-    vignettes = []
-    for haut, bas in bandes(masque.any(axis=1), ecart_min=max(8, h // 60)):
-        rangee = masque[haut:bas + 1]
-        fin_dessins = separer_legende(a[haut:bas + 1], rangee)
-        dessins = rangee[:fin_dessins]
-        if not dessins.any():
-            continue
-        for gauche, droite in bandes(dessins.any(axis=0), ecart_min=max(12, w // 40)):
-            colonne = dessins[:, gauche:droite + 1]
-            (lignes_pleines,) = np.where(colonne.any(axis=1))
-            y0, y1 = haut + lignes_pleines[0], haut + lignes_pleines[-1]
-            vignettes.append((gauche, y0, droite, y1))
+    # Un dessin est fait de plusieurs taches — l'ananas et ses tranches, la
+    # bouteille et ses olives. On les rapproche avant de les compter comme une.
+    liees = label(dilation(masque, disk(max(3, h // 200))))
 
-    if noms and len(noms) != len(vignettes):
-        print(f"  ⚠ {len(vignettes)} vignettes détectées pour {len(noms)} noms — "
-              f"vérifiez la planche avant de verser dans Figma", file=sys.stderr)
+    formes = []
+    for region in regionprops(liees):
+        y0, x0, y1, x1 = region.bbox
+        tache = masque[y0:y1, x0:x1]
+        if tache.sum() < (h * w) // 20000:
+            continue                                   # poussière de rendu
+        colore = np.logical_and(sature[y0:y1, x0:x1], tache).sum() / max(1, tache.sum())
+        # Une légende n'a pas de couleur et reste basse ; un aplat blanc peut
+        # être sans couleur lui aussi, mais il occupe de la hauteur.
+        if colore < 0.02 and (y1 - y0) < 0.09 * h:
+            continue
+        formes.append((y0, x0, y1, x1))
+
+    if not formes:
+        return []
+
+    rangees = grouper([(y0 + y1) / 2 for y0, _, y1, _ in formes], ecart_min=0.10 * h)
+    cellules = []
+    for rangee in rangees:
+        colonnes = grouper([(formes[i][1] + formes[i][3]) / 2 for i in rangee],
+                           ecart_min=0.06 * w)
+        for colonne in colonnes:
+            groupe = [formes[rangee[i]] for i in colonne]
+            cellules.append((min(f[1] for f in groupe), min(f[0] for f in groupe),
+                             max(f[3] for f in groupe), max(f[2] for f in groupe)))
+
+    # Quand les noms sont donnés, leur nombre est une contrainte utile : les
+    # grains épars à côté d'un bol se détachent volontiers en cellule propre, et
+    # on les rend à leur voisin le plus proche plutôt que d'inventer un
+    # ingrédient. On ne recolle jamais au-delà du compte attendu.
+    if noms:
+        while len(cellules) > len(noms):
+            ecarts = []
+            for i in range(len(cellules) - 1):
+                a_, b_ = cellules[i], cellules[i + 1]
+                meme_rangee = min(a_[3], b_[3]) - max(a_[1], b_[1]) > 0
+                if meme_rangee:
+                    ecarts.append((b_[0] - a_[2], i))
+            if not ecarts:
+                break
+            _, i = min(ecarts)
+            a_, b_ = cellules[i], cellules[i + 1]
+            cellules[i:i + 2] = [(min(a_[0], b_[0]), min(a_[1], b_[1]),
+                                  max(a_[2], b_[2]), max(a_[3], b_[3]))]
+        if len(cellules) != len(noms):
+            print(f"  ⚠ {len(cellules)} vignettes détectées pour {len(noms)} noms — "
+                  f"vérifiez la planche avant de verser dans Figma", file=sys.stderr)
 
     decoupes = []
-    for i, (x0, y0, x1, y1) in enumerate(vignettes):
+    for i, (x0, y0, x1, y1) in enumerate(cellules):
         nom = noms[i] if noms and i < len(noms) else f"vignette-{i + 1:02d}"
         # Chaque dessin est posé au centre d'un carré, à l'échelle de sa plus
         # grande dimension : les proportions sont gardées, le cadre est commun.
-        vignette = image.crop((x0, y0, x1 + 1, y1 + 1))
+        vignette = image.crop((x0, y0, x1, y1))
         utile = cote - 2 * marge
         facteur = min(utile / vignette.width, utile / vignette.height)
         taille = (max(1, round(vignette.width * facteur)), max(1, round(vignette.height * facteur)))
         carre = Image.new("RGB", (cote, cote), "white")
         carre.paste(vignette.resize(taille, Image.LANCZOS),
                     ((cote - taille[0]) // 2, (cote - taille[1]) // 2))
-        decoupes.append((nom, carre, (x1 - x0 + 1, y1 - y0 + 1)))
+        decoupes.append((nom, carre, (x1 - x0, y1 - y0)))
     return decoupes
 
 
