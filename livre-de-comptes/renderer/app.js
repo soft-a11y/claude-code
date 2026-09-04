@@ -16,6 +16,13 @@
 
   var IS_APP = Boolean(window.compta);
 
+  function notionUnavailable() {
+    return Promise.resolve({
+      ok: false,
+      message: "L'envoi vers Notion n'est disponible que dans l'application."
+    });
+  }
+
   function browserFallback() {
     var KEY = "livre-de-comptes.v1";
 
@@ -69,6 +76,19 @@
       openCsv: function () { return pick(".csv,text/csv"); },
       saveJson: function (name, text) { return download(name, text, "application/json"); },
       openJson: function () { return pick(".json,application/json"); },
+      // L'envoi vers Notion demande le processus principal : il porte le
+      // jeton et fait les appels réseau. Hors application, tout est inerte.
+      notion: {
+        load: function () { return Promise.resolve({ hasToken: false, databaseId: "" }); },
+        save: notionUnavailable,
+        forget: notionUnavailable,
+        check: notionUnavailable,
+        useDatabase: notionUnavailable,
+        createDatabase: notionUnavailable,
+        sync: notionUnavailable,
+        onProgress: function () { /* pas de progression hors application */ }
+      },
+
       confirm: function (o) { return Promise.resolve(window.confirm(o.message + (o.detail ? "\n\n" + o.detail : ""))); },
       info: function (o) { window.alert(o.message + (o.detail ? "\n\n" + o.detail : "")); return Promise.resolve(); },
       onMenu: function () { /* pas de menus hors application */ }
@@ -560,6 +580,169 @@
   $("catClose").addEventListener("click", function () { $("catDialog").close(); });
   $("catDialog").addEventListener("close", function () { fillCategoryOptions(); });
 
+  /* ---------------------------------------------------------- envoi Notion */
+
+  var notionScope = "month";
+  var notionBusy = false;
+
+  function notionState(id, message, tone) {
+    var el = $(id);
+    el.textContent = message;
+    el.className = "steps__state" + (tone ? " is-" + tone : "");
+  }
+
+  function notionError(message) {
+    var el = $("notionError");
+    el.textContent = message || "";
+    el.hidden = !message;
+  }
+
+  function refreshNotionState() {
+    return api.notion.load().then(function (config) {
+      notionState("notionTokenState",
+        config.hasToken ? "Jeton enregistré sur cet ordinateur." : "Aucun jeton enregistré.",
+        config.hasToken ? "ok" : null);
+      notionState("notionDbState",
+        config.databaseId ? "Base liée : " + config.databaseId : "Aucune base indiquée.",
+        config.databaseId ? "ok" : null);
+      $("notionSend").disabled = !(config.hasToken && config.databaseId);
+      return config;
+    });
+  }
+
+  function openNotionDialog() {
+    notionError("");
+    $("notionToken").value = "";
+    refreshNotionState();
+    var dialog = $("notionDialog");
+    if (!dialog.open) dialog.showModal();
+  }
+
+  function setNotionScope(scope) {
+    notionScope = scope;
+    $("notionScopeMonth").setAttribute("aria-pressed", String(scope === "month"));
+    $("notionScopeAll").setAttribute("aria-pressed", String(scope === "all"));
+  }
+
+  // Les boutons se verrouillent pendant un appel réseau : deux envois
+  // simultanés créeraient des doublons dans Notion.
+  function notionLock(locked) {
+    notionBusy = locked;
+    ["notionSaveToken", "notionUseDb", "notionCreateDb", "notionSend", "notionForget"].forEach(function (id) {
+      $(id).disabled = locked;
+    });
+    if (!locked) refreshNotionState();
+  }
+
+  $("notionSaveToken").addEventListener("click", function () {
+    var token = $("notionToken").value.trim();
+    if (!token) { notionError("Collez le secret de votre intégration Notion."); return; }
+    notionError("");
+    notionLock(true);
+    api.notion.save({ token: token }).then(function () {
+      $("notionToken").value = "";
+      notionLock(false);
+    });
+  });
+
+  $("notionUseDb").addEventListener("click", function () {
+    var target = $("notionTarget").value.trim();
+    if (!target) { notionError("Collez l'adresse de la base Notion."); return; }
+    notionError("");
+    notionLock(true);
+    notionState("notionDbState", "Vérification…", "busy");
+    api.notion.useDatabase({ target: target }).then(function (res) {
+      if (!res.ok) notionError(res.message);
+      else toast("Base « " + res.title + " » liée.");
+      notionLock(false);
+    });
+  });
+
+  $("notionCreateDb").addEventListener("click", function () {
+    var target = $("notionTarget").value.trim();
+    if (!target) { notionError("Collez l'adresse de la page Notion qui accueillera la base."); return; }
+    notionError("");
+    notionLock(true);
+    notionState("notionDbState", "Création de la base…", "busy");
+    api.notion.createDatabase({ target: target, parent: target, title: "Livre de comptes" }).then(function (res) {
+      if (!res.ok) notionError(res.message);
+      else toast("Base créée dans Notion.");
+      notionLock(false);
+    });
+  });
+
+  $("notionForget").addEventListener("click", function () {
+    api.confirm({
+      message: "Oublier les réglages Notion ?",
+      detail: "Le jeton et le lien vers la base seront supprimés de cet ordinateur. Les lignes déjà envoyées restent dans Notion.",
+      confirmLabel: "Oublier"
+    }).then(function (ok) {
+      if (!ok) return;
+      api.notion.forget().then(function () {
+        notionError("");
+        refreshNotionState();
+      });
+    });
+  });
+
+  $("notionSend").addEventListener("click", function () {
+    if (notionBusy) return;
+    var list = notionScope === "month" ? L.inMonth(state.entries, view) : state.entries;
+    if (!list.length) { notionError("Aucune écriture à envoyer pour cette sélection."); return; }
+
+    notionError("");
+    notionLock(true);
+    notionState("notionSendState", "Envoi de " + list.length + " écritures…", "busy");
+
+    api.notion.sync({ entries: list }).then(function (res) {
+      notionLock(false);
+      if (!res.ok) {
+        notionState("notionSendState", "Envoi interrompu.", null);
+        notionError(res.message);
+        return;
+      }
+
+      var report = res.report;
+      // On garde le lien vers chaque page Notion : le prochain envoi mettra
+      // à jour au lieu de recréer.
+      state.entries.forEach(function (e) {
+        if (!Object.prototype.hasOwnProperty.call(report.pages, e.id)) return;
+        var pageId = report.pages[e.id];
+        if (pageId) e.notionPageId = pageId;
+        else delete e.notionPageId;
+      });
+      persist();
+
+      var parts = [];
+      if (report.created) parts.push(report.created + (report.created > 1 ? " créées" : " créée"));
+      if (report.updated) parts.push(report.updated + (report.updated > 1 ? " mises à jour" : " mise à jour"));
+      if (report.failed) parts.push(report.failed + (report.failed > 1 ? " en échec" : " en échec"));
+      notionState("notionSendState", parts.length ? parts.join(", ") + "." : "Rien à envoyer.",
+        report.failed ? null : "ok");
+
+      if (report.aborted) notionError(report.aborted);
+      else if (report.errors.length) {
+        notionError("Première erreur : " + report.errors[0].reason);
+      }
+    });
+  });
+
+  $("notionScopeMonth").addEventListener("click", function () { setNotionScope("month"); });
+  $("notionScopeAll").addEventListener("click", function () { setNotionScope("all"); });
+  $("notionClose").addEventListener("click", function () { $("notionDialog").close(); });
+  $("openNotion").addEventListener("click", openNotionDialog);
+  $("notionIntegrations").addEventListener("click", function () {
+    window.open("https://www.notion.so/my-integrations", "_blank");
+  });
+
+  if (IS_APP) {
+    api.notion.onProgress(function (progress) {
+      if (progress.done >= progress.total) return;
+      notionState("notionSendState",
+        progress.done + " / " + progress.total + (progress.label ? " · " + progress.label : ""), "busy");
+    });
+  }
+
   /* ------------------------------------------------------ suppression */
 
   var undoBuffer = null;
@@ -779,6 +962,7 @@
     next: function () { view = L.shiftMonth(view, 1); render(); },
     today: function () { view = L.isoOf(today).slice(0, 7); render(); },
     categories: openCategories,
+    notion: openNotionDialog,
     "import-csv": importCsv,
     "export-csv-month": function () { exportCsv("month"); },
     "export-csv-all": function () { exportCsv("all"); },
@@ -807,7 +991,7 @@
     demo = Boolean(data.demo);
     state.categories = L.sanitizeCategories(data.categories);
     state.entries = (data.entries || []).map(function (e) {
-      return {
+      var entry = {
         id: e.id || newId(),
         created: e.created || 0,
         type: e.type === "r" ? "r" : "d",
@@ -818,6 +1002,10 @@
         category: String(e.category || "Divers"),
         date: L.isValidIso(e.date) ? e.date : L.isoOf(today)
       };
+      // Le lien vers la page Notion doit survivre au redémarrage, sinon le
+      // prochain envoi recréerait des lignes déjà présentes.
+      if (typeof e.notionPageId === "string" && e.notionPageId) entry.notionPageId = e.notionPageId;
+      return entry;
     });
 
     if (data.rescuedFrom) {
@@ -833,6 +1021,7 @@
 
     if (IS_APP) {
       $("reveal").hidden = false;
+      $("openNotion").hidden = false;
       api.dataPath().then(function (path) {
         $("storeInfo").textContent = "Vos écritures sont enregistrées sur cet ordinateur : " + path;
       });

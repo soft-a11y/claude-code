@@ -146,6 +146,7 @@
   <footer class="colophon">
     <span id="storeInfo">Vos écritures sont enregistrées sur cet ordinateur.</span>
     <span class="colophon__actions">
+      <button class="linkbtn" type="button" id="openNotion" hidden>Envoyer vers Notion</button>
       <button class="linkbtn" type="button" id="reveal" hidden>Afficher le fichier</button>
       <button class="linkbtn" type="button" id="wipe">Effacer toutes les données</button>
     </span>
@@ -183,6 +184,62 @@
 
   <ul class="catmanage" id="catManage"></ul>
   <p class="modal__foot">Renommer une catégorie met à jour les écritures qui l'utilisent. La supprimer les fait repasser dans « Divers ».</p>
+</dialog>
+
+<dialog class="modal" id="notionDialog" aria-labelledby="notionTitle">
+  <div class="modal__head">
+    <div>
+      <h2 id="notionTitle">Envoyer vers Notion</h2>
+      <p class="modal__intro">Vos écritures deviennent des lignes dans une base Notion.</p>
+    </div>
+    <button class="step" type="button" id="notionClose" aria-label="Fermer">×</button>
+  </div>
+
+  <ol class="steps">
+    <li class="steps__item">
+      <h3>1 · Le jeton d'intégration</h3>
+      <p class="steps__help">
+        Sur <span class="steps__link" id="notionIntegrations">notion.so/my-integrations</span>, créez une
+        intégration interne et copiez son secret (il commence par <code>ntn_</code> ou <code>secret_</code>).
+      </p>
+      <div class="steps__row">
+        <input id="notionToken" type="password" placeholder="ntn_…" autocomplete="off" spellcheck="false">
+        <button class="btn-ghost" type="button" id="notionSaveToken">Enregistrer</button>
+      </div>
+      <p class="steps__state" id="notionTokenState">Aucun jeton enregistré.</p>
+    </li>
+
+    <li class="steps__item">
+      <h3>2 · La base de données</h3>
+      <p class="steps__help">
+        Collez l'adresse d'une base existante, ou celle d'une page dans laquelle créer la base.
+        Dans Notion, la page doit être partagée avec votre intégration : menu <b>···</b> ▸ Connexions.
+      </p>
+      <div class="steps__row">
+        <input id="notionTarget" type="text" placeholder="https://www.notion.so/…" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="steps__row steps__row--buttons">
+        <button class="btn-ghost" type="button" id="notionUseDb">Utiliser cette base</button>
+        <button class="btn-ghost" type="button" id="notionCreateDb">Créer la base dans cette page</button>
+      </div>
+      <p class="steps__state" id="notionDbState">Aucune base indiquée.</p>
+    </li>
+
+    <li class="steps__item">
+      <h3>3 · L'envoi</h3>
+      <div class="seg seg--wide" role="group" aria-label="Étendue de l'envoi">
+        <button type="button" id="notionScopeMonth" aria-pressed="true">Le mois affiché</button>
+        <button type="button" id="notionScopeAll" aria-pressed="false">Tout le livre</button>
+      </div>
+      <div class="steps__row steps__row--buttons">
+        <button class="btn-primary" type="button" id="notionSend">Envoyer</button>
+        <button class="linkbtn" type="button" id="notionForget">Oublier mes réglages</button>
+      </div>
+      <p class="steps__state" id="notionSendState">Une écriture déjà envoyée est mise à jour, jamais dupliquée.</p>
+    </li>
+  </ol>
+
+  <p class="formerror" id="notionError" hidden></p>
 </dialog>
 
 <script src="ledger.js"></script>

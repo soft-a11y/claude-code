@@ -24,6 +24,13 @@ function check(name, condition, detail) {
   }
 }
 
+// Un blocage doit se solder par un échec visible, pas par une attente sans fin.
+const watchdog = setTimeout(() => {
+  console.log("FAIL le test ne s'est pas terminé en 90 s");
+  process.exit(1);
+}, 90000);
+watchdog.unref();
+
 require("../main.js");
 
 app.whenReady().then(async () => {
@@ -53,6 +60,9 @@ app.whenReady().then(async () => {
     livre.submenu.items.some((i) => i.label === "Gérer les catégories…"));
 
   const run = (js) => win.webContents.executeJavaScript(js, true);
+  // executeJavaScript évalue une expression : pas d'await à la racine, mais il
+  // attend la promesse rendue. On enveloppe donc les appels asynchrones.
+  const runAsync = (js) => run("(async () => { return " + js + "; })()");
 
   check("le pont preload est exposé", await run("typeof window.compta === 'object'"));
   check("la logique du livre est chargée", await run("typeof window.Ledger.totals === 'function'"));
@@ -84,6 +94,48 @@ app.whenReady().then(async () => {
   await new Promise((r) => setTimeout(r, 250));
   check("la commande de menu « mois précédent » est prise en compte",
     (await run("document.querySelectorAll('#ledgerBody tr').length")) === 0);
+
+  /* ---- Notion : réglages et garde-fous, sans appeler l'API ---- */
+
+  const livreMenu = menu && menu.items.find((i) => i.label === "Fichier");
+  check("le menu Fichier propose l'envoi vers Notion", Boolean(livreMenu) &&
+    livreMenu.submenu.items.some((i) => i.label === "Envoyer vers Notion…"));
+
+  check("le pont Notion est exposé", await run("typeof window.compta.notion.sync === 'function'"));
+
+  const before = JSON.parse(await runAsync("JSON.stringify(await window.compta.notion.load())"));
+  check("aucun réglage Notion au départ", before.hasToken === false && before.databaseId === "");
+
+  const SECRET = "ntn_jeton_de_test_0123456789";
+  await runAsync(`window.compta.notion.save({ token: ${JSON.stringify(SECRET)} })`);
+
+  const after = JSON.parse(await runAsync("JSON.stringify(await window.compta.notion.load())"));
+  check("le jeton est enregistré", after.hasToken === true);
+  check("le jeton ne revient jamais vers la page", !JSON.stringify(after).includes(SECRET),
+    JSON.stringify(after));
+
+  const notionFile = path.join(userData, "notion.json");
+  check("le jeton vit dans son propre fichier", fs.existsSync(notionFile));
+  if (fs.existsSync(notionFile)) {
+    const mode = fs.statSync(notionFile).mode & 0o777;
+    check("le fichier du jeton est lisible par le seul propriétaire", mode === 0o600, "mode " + mode.toString(8));
+  }
+
+  const ledger = JSON.parse(fs.readFileSync(file, "utf8"));
+  check("le jeton n'est pas dans le livre", !JSON.stringify(ledger).includes(SECRET));
+
+  const noDb = JSON.parse(await runAsync("JSON.stringify(await window.compta.notion.sync({ entries: [] }))"));
+  check("sans base configurée, l'envoi refuse proprement", noDb.ok === false && /base/i.test(noDb.message),
+    JSON.stringify(noDb));
+
+  const badTarget = JSON.parse(await runAsync(
+    "JSON.stringify(await window.compta.notion.useDatabase({ target: 'https://exemple.fr/pas-notion' }))"
+  ));
+  check("une adresse non reconnue est refusée sans appel réseau",
+    badTarget.ok === false && /non reconnue/.test(badTarget.message), JSON.stringify(badTarget));
+
+  const forgotten = JSON.parse(await runAsync("JSON.stringify(await window.compta.notion.forget())"));
+  check("oublier les réglages efface le fichier", forgotten.hasToken === false && !fs.existsSync(notionFile));
 
   check("aucune erreur dans la page", errors.length === 0, errors.join(" | "));
   finish();

@@ -56,6 +56,7 @@ catégorie, sans tenir compte des accents ni des majuscules.
 | `⌘←` `⌘→` | Mois précédent, mois suivant |
 | `⌘T` / `Ctrl+T` | Revenir au mois courant |
 | `⌘E` / `Ctrl+E` | Exporter le mois affiché en CSV |
+| `⌘⇧N` / `Ctrl+Shift+N` | Envoyer vers Notion |
 | `⌘S` / `Ctrl+S` | Enregistrer une sauvegarde |
 | `Échap` | Annuler la recherche, ou la modification en cours |
 
@@ -105,6 +106,46 @@ dépense et un montant positif comme une recette, ce qui correspond aux
 exports de relevés bancaires. Les lignes illisibles sont écartées et
 comptées ; les autres sont importées.
 
+### Envoyer vers Notion
+
+**Fichier ▸ Envoyer vers Notion…** (`⌘⇧N`) transforme vos écritures en lignes
+d'une base Notion, avec cinq colonnes : Libellé, Date, Montant, Type,
+Catégorie.
+
+![L'envoi vers Notion](docs/notion.png)
+
+Trois étapes, une seule fois :
+
+1. **Le jeton.** Sur [notion.so/my-integrations](https://www.notion.so/my-integrations),
+   créez une intégration interne et copiez son secret (`ntn_…`).
+2. **La base.** Collez l'adresse d'une page Notion et cliquez *Créer la base
+   dans cette page* — l'application la crée avec les bonnes colonnes. Si vous
+   avez déjà une base au bon format, collez son adresse et cliquez *Utiliser
+   cette base*. Dans les deux cas, la page doit être partagée avec votre
+   intégration : dans Notion, menu **···** ▸ *Connexions* ▸ votre intégration.
+3. **L'envoi.** Le mois affiché, ou tout le livre.
+
+Ce qu'il faut savoir :
+
+- **Le montant part signé** : négatif pour une dépense, positif pour une
+  recette. La somme de la colonne dans Notion donne donc directement le solde.
+- **Pas de doublons.** Chaque écriture retient l'identifiant de sa page
+  Notion ; un second envoi met les lignes à jour au lieu d'en recréer. Si vous
+  supprimez une ligne dans Notion, l'envoi suivant la recrée.
+- **La synchronisation va dans un seul sens**, de l'application vers Notion.
+  Ce que vous modifiez dans Notion sera écrasé au prochain envoi.
+- **Une écriture en échec n'arrête pas les autres** : le rapport indique
+  combien ont été créées, mises à jour, et ce qui a échoué. Un jeton refusé,
+  lui, interrompt tout de suite.
+- Le rythme est bridé à trois requêtes par seconde, la limite de Notion. Un
+  gros premier envoi prend donc un moment : comptez une seconde pour trois
+  écritures.
+
+**Le jeton ne quitte pas votre ordinateur.** Il est écrit dans un fichier
+séparé (`notion.json`, à côté de `comptes.json`), lisible par votre seul
+compte utilisateur, et n'est jamais transmis à la page affichée ni inclus
+dans les sauvegardes ou les exports. *Oublier mes réglages* le supprime.
+
 ### Où sont mes données
 
 Menu **Aide ▸ Où sont mes données ?** affiche le chemin exact. Selon le
@@ -127,6 +168,7 @@ Fichier ▸ Enregistrer une sauvegarde.
 
 ```
 main.js              processus principal : fenêtre, menus, lecture/écriture du fichier
+notion.js            client de l'API Notion : conversions, erreurs, envoi bridé
 preload.js           le pont exposé à la page (window.compta), seule surface accessible
 renderer/ledger.js   montants, agrégats, CSV — sans DOM, testable seul
 renderer/app.js      rendu, formulaire, réactions aux menus
@@ -152,6 +194,10 @@ pas les mêmes que celles de l'application.
 ## Tests
 
 ```bash
-npm test        # logique du livre : montants, agrégats, CSV, validation
+npm test           # logique du livre et client Notion (avec un faux réseau)
 npm run test:app   # démarre réellement l'app, écrit une écriture, vérifie le fichier
 ```
+
+Les tests du client Notion n'appellent jamais l'API : le client reçoit son
+`fetch`, ce qui permet de vérifier la forme des requêtes, la traduction des
+erreurs et le comportement de l'envoi sans jeton ni réseau.

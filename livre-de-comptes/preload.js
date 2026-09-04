@@ -15,6 +15,19 @@ contextBridge.exposeInMainWorld("compta", {
   saveJson: (name, text) => ipcRenderer.invoke("file:saveJson", name, text),
   openJson: () => ipcRenderer.invoke("file:openJson"),
 
+  notion: {
+    load: () => ipcRenderer.invoke("notion:load"),
+    save: (config) => ipcRenderer.invoke("notion:save", config),
+    forget: () => ipcRenderer.invoke("notion:forget"),
+    check: () => ipcRenderer.invoke("notion:check"),
+    useDatabase: (opts) => ipcRenderer.invoke("notion:useDatabase", opts),
+    createDatabase: (opts) => ipcRenderer.invoke("notion:createDatabase", opts),
+    sync: (opts) => ipcRenderer.invoke("notion:sync", opts),
+    onProgress: (handler) => {
+      ipcRenderer.on("notion:progress", (_event, progress) => handler(progress));
+    },
+  },
+
   confirm: (opts) => ipcRenderer.invoke("dialog:confirm", opts),
   info: (opts) => ipcRenderer.invoke("dialog:info", opts),
 
