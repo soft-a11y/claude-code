@@ -1,7 +1,7 @@
 ---
 type: fiche-de-production
 projet: Mezze — illustrations d'ingrédients
-version: 1
+version: 2
 maj: 2026-09-04
 statut: vivante — s'améliore par essais ratifiés
 ---
@@ -32,18 +32,25 @@ statut: vivante — s'améliore par essais ratifiés
 | `folderReference` | `11e9cd40-50af-4815-bf3d-12e468fdba93` (projet MEZZE) | Tout au même endroit. À repasser à CHAQUE appel. |
 | `prompt` | `dans le même style crée moi <ingrédient>` | Mot pour mot. Rien d'autre. |
 
+**Nommer l'ingrédient, pas le style.** Le seul mot qui change est le nom, et il doit désigner la chose
+comestible sans ambiguïté : `un avocat (le fruit)` et non `un avocat` (le modèle a dessiné un juriste) ;
+`des carrés de chocolat noir` et non `du chocolat noir` (il a dessiné une tablette emballée avec du texte).
+Préciser la forme reste dans le nom ; décrire le trait, non.
+
 ### 2. Références (le vrai « style »)
 
 Toujours passer, dans cet ordre :
 
 ```json
 [
-  { "type": "style", "identifier": "bxUXbCH5Y2" },
-  { "type": "image", "identifier": "<validée la plus proche par nature, voir § 4>" }
+  { "type": "image", "identifier": "bxUXbCH5Y2" },
+  { "type": "image", "identifier": "<validée la plus proche par nature, voir § 8>" }
 ]
 ```
 
 - `bxUXbCH5Y2` = `reference-img1`, la carotte validée. **Ancre de style, ne jamais l'enlever.**
+- 🔴 **Type `image`, jamais `style`** (amendement A1). Le type `style` transfère la PALETTE de la carotte
+  (fonds orange, verts sombres, emballages), pas sa manière de dessiner. Le type `image` reproduit le trait.
 - La deuxième référence est une **validée proche par nature** de l'ingrédient demandé
   (légume-racine pour la pomme de terre, flacon pour l'huile, herbe pour le persil). Elle guide la forme.
 - Maximum 12 références ; trois ou quatre bien choisies valent mieux que douze.
@@ -58,7 +65,7 @@ images_generate(
   count: 3,
   folderReference: "11e9cd40-50af-4815-bf3d-12e468fdba93",
   references: [
-    { type: "style", identifier: "bxUXbCH5Y2" },
+    { type: "image", identifier: "bxUXbCH5Y2" },
     { type: "image", identifier: "<id de l'épinard validé>" }
   ]
 )
@@ -69,6 +76,9 @@ Puis `creations_show` sur les 3 identifiants, puis `creations_wait`. Puis § 4, 
 ### 4. Grille de contrôle (à l'œil, AVANT de proposer)
 
 Une variante passe si TOUT est vrai. Sinon elle ne se corrige pas par retouche : on relance.
+
+Témoins visuels, à regarder avant de juger : `temoins/set-valide-figma.png` (les 14 validées) et
+`temoins/carotte-reference-bxUXbCH5Y2.jpg` (l'ancre de style, en grand).
 
 - [ ] **Contour** : noir, épais, uniforme, fermé sur toute la silhouette.
 - [ ] **Remplissage** : aplats, une couleur de base + une seule zone d'ombre plus foncée, plate. Aucun dégradé, aucune aquarelle, aucun grain.
@@ -98,11 +108,14 @@ Si aucune des 3 variantes ne passe : changer la **deuxième** référence (§ 2)
 Une ligne par appel, rempli **immédiatement après** `creations_wait`, avant même de montrer les images.
 Le verdict est celui de l'humain, jamais celui de l'agent. Tant qu'il n'a pas tranché : `en attente`.
 
-| Date | Ingrédient | Identifiants (3) | 2ᵉ référence utilisée | Verdict humain | Remarque |
+| Date | Ingrédient | Identifiants | 2ᵉ référence utilisée | Verdict humain | Remarque |
 |---|---|---|---|---|---|
-| 2026-09-04 | Poireau | `4RYyHfS9Aa` `Sy3lv86Ub8` `eICD47LdqL` | aucune — registre § 8 vide | `en attente` | Grille : #1 et #3 fond orange plein, #1 porte un visage de dessin animé. #2 est la seule sur fond blanc — forme juste, contour correct, mais dégradé dans le vert. |
-| 2026-09-04 | Avocat | `gOishENSXO` `lJ6LmCMgv9` `KL7be8akqp` | aucune — registre § 8 vide | `en attente` | Grille : 3/3 hors sujet. Le modèle a lu « avocat » comme la profession — deux hommes en costume avec balance et code civil, un fruit en costume. Homonymie du mot français. |
-| 2026-09-04 | Chocolat noir | `UPRgaxGwny` `dtEp90zXSL` `xSP1ob3jfW` | aucune — registre § 8 vide | `en attente` | Grille : 3/3 échouent sur trois points — texte d'emballage (« CHOCOLAT NOIR », « 70% CACAO »), fond vert ou orange, et scène à plusieurs objets (tablette + cabosse + feuilles + éclats) au lieu d'un seul. |
+| 04/09 | poireau | `4RYyHfS9Aa` `Sy3lv86Ub8` `eICD47LdqL` | aucune (carotte en type `style`) | rejeté | 1 sur 3 proche du style, les autres fond orange : palette transférée |
+| 04/09 | avocat | `gOishENSXO` `lJ6LmCMgv9` `KL7be8akqp` | aucune (carotte en type `style`) | rejeté | deux juristes, un avocat-mascotte en costume ; nom ambigu + palette |
+| 04/09 | chocolat noir | `UPRgaxGwny` `dtEp90zXSL` `xSP1ob3jfW` | aucune (carotte en type `style`) | rejeté | tablettes emballées avec texte, fonds orange/vert |
+| 04/09 | poireau (test A1) | `lJ6Lqnfgv9` `O6G7xMJynm` | aucune (carotte en type `image`) | en attente | les deux dans le style : fond blanc, contour, aplats, ombre plate |
+| 04/09 | avocat (le fruit) — test A1+A2 | `nVBzB72YQD` `KL757I4kqp` | aucune (carotte en type `image`) | en attente | 2/2 dans le style : fond blanc, contour noir épais et fermé, aplat + une ombre plate, stries fines sur la peau, objet unique centré. Le juriste a disparu. Réserve : le noyau porte une tache claire qui tire vers le dégradé. Appel parti à 2 variantes sur 3, plafond d'usage `gpt-2` atteint. |
+| 04/09 | carrés de chocolat noir | — | — | non lancé | Plafond d'usage `gpt-2` atteint, rien facturé. À reprendre. |
 
 ### 6. Amendements proposés
 
@@ -111,10 +124,10 @@ une exception à la grille), l'agent **propose** ici. Il ne l'applique pas.
 
 | N° | Date | Ce que ça change (§ visé) | Preuve (lignes du § 5) | Statut |
 |---|---|---|---|---|
-| A1 | 2026-09-04 | § 2 — prévoir le cas où aucune validée n'existe encore pour la nature demandée : autoriser l'ancre seule, ou nommer une validée de repli. En l'état la recette n'est pas applicable telle quelle tant que le § 8 est vide. | Les 3 essais du 2026-09-04 | `proposé` |
-| A2 | 2026-09-04 | § 1 ou § 2 — le fond blanc n'est pas obtenu : 6 variantes sur 9 sortent sur un aplat orange ou vert. L'ancre est la carotte, dont l'orange semble lu comme une couleur de fond. À traiter par une 2ᵉ référence sur fond blanc franc, non par le prompt. | Poireau #1 #3, Avocat #2 #3, Chocolat #1 #2 #3 | `proposé` |
-| A3 | 2026-09-04 | § 1 — nommer l'ingrédient sans ambiguïté dans le prompt (« un avocat, le fruit »). Ce n'est pas réécrire le prompt ni décrire le style : c'est désigner l'objet. Sans quoi les homonymes français sortent faux à tous les coups. | Avocat, 3 variantes sur 3 | `proposé` |
-| A4 | 2026-09-04 | § 4 — les produits emballés (tablette, boîte, sachet) tirent le modèle vers le texte et la scène composée. Soit les nommer par leur contenu (« des carrés de chocolat noir »), soit les traiter comme une catégorie à part. | Chocolat noir, 3 variantes sur 3 | `proposé` |
+| A1 | 04/09 | § 2 : références en type `image`, plus jamais `style` | poireau `style` (1/3) vs poireau `image` (2/2) | appliqué sur test comparatif ; à confirmer par Rémy |
+| A2 | 04/09 | § 1 : le nom désigne la chose comestible sans ambiguïté (forme incluse) | avocat → juristes ; chocolat → tablette emballée. **Contre-épreuve du 04/09 : « un avocat (le fruit) » donne 2/2 dans le style, contre 0/3 pour « un avocat ».** | proposé — preuve faite sur l'avocat, reste à confirmer sur le chocolat |
+| A3 | 04/09 | § 4 : les deux témoins visuels sont introuvables. Le nœud Figma `4080:57730` n'existe plus dans le fichier, et `temoins/set-valide-figma.png` comme `temoins/carotte-reference-bxUXbCH5Y2.jpg` ne sont pas versionnés. La grille se juge donc à l'aveugle. | Essai avocat du 04/09 | proposé |
+| A4 | 04/09 | § 1 ou § 3 : `gpt-2` a un plafond d'usage propre, distinct du solde de crédits. Il coupe un appel en cours de route — l'avocat est sorti à 2 variantes sur 3 — et rejette les suivants sans rien facturer. Prévoir la reprise. | Essais avocat et chocolat du 04/09 | proposé |
 
 Un amendement `ratifié` est ensuite reporté dans la Partie A par l'agent, **en citant son numéro** dans la colonne « Pourquoi »
 ou en note sous le paragraphe modifié. `version` en tête de fiche s'incrémente.
@@ -149,3 +162,4 @@ se remplit au fil des essais du § 5 : c'est ainsi que la fiche apprend quelle r
 | Version | Date | Changement | Amendement |
 |---|---|---|---|
 | 1 | 2026-09-04 | Création : recette déduite des 14 validées et des 51 générations du 03/09. Non testée. | — |
+| 2 | 2026-09-04 | Références en type `image` ; règle de nommage de l'ingrédient ; journal des 4 premiers essais. | A1, A2 |
