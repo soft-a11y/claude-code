@@ -180,6 +180,120 @@ test("les données d'exemple couvrent six mois et restent dans le passé", () =>
   });
 });
 
+/* ------------------------------------------------------------- catégories */
+
+const book = (entries = [], categories = L.defaultCategories()) => ({ entries, categories });
+
+test("listCategories réunit les listes enregistrées et celles des écritures", () => {
+  const b = book(
+    [{ type: "d", category: "Coiffeur", amount: 1, date: "2026-09-01" }],
+    { d: ["Courses", "Loyer"], r: ["Salaire"] }
+  );
+  assert.deepEqual(L.listCategories(b, "d"), ["Coiffeur", "Courses", "Loyer"]);
+  assert.deepEqual(L.listCategories(b, "r"), ["Salaire"]);
+});
+
+test("les deux sens ont des listes distinctes", () => {
+  const b = book([], { d: ["Courses"], r: ["Salaire"] });
+  const after = L.addCategory(b, "r", "Loyer perçu");
+  assert.ok(after.ok);
+  assert.deepEqual(after.categories.d, ["Courses"]);
+  assert.deepEqual(after.categories.r, ["Salaire", "Loyer perçu"]);
+});
+
+test("addCategory refuse le vide et les doublons, accents compris", () => {
+  const b = book([], { d: ["Énergie"], r: ["Salaire"] });
+  assert.equal(L.addCategory(b, "d", "   ").ok, false);
+  const dup = L.addCategory(b, "d", "energie");
+  assert.equal(dup.ok, false);
+  assert.match(dup.message, /existe déjà/);
+  assert.equal(L.addCategory(b, "d", "Énergie ").ok, false);
+  assert.equal(L.addCategory(b, "d", "Coiffeur").ok, true);
+});
+
+test("addCategory tronque les noms trop longs", () => {
+  const res = L.addCategory(book(), "d", "x".repeat(80));
+  assert.ok(res.ok);
+  assert.equal(res.name.length, 40);
+});
+
+test("renameCategory suit les écritures concernées", () => {
+  const entries = [
+    { id: "1", type: "d", category: "Courses", amount: 100, date: "2026-09-01" },
+    { id: "2", type: "d", category: "Loyer", amount: 100, date: "2026-09-02" },
+    { id: "3", type: "r", category: "Courses", amount: 100, date: "2026-09-03" }
+  ];
+  const res = L.renameCategory(book(entries), "d", "Courses", "Alimentation");
+  assert.ok(res.ok);
+  assert.equal(res.moved, 1);
+  assert.equal(res.entries[0].category, "Alimentation");
+  assert.equal(res.entries[1].category, "Loyer");
+  // L'écriture de recette porte le même nom mais dans l'autre sens : intacte.
+  assert.equal(res.entries[2].category, "Courses");
+  assert.ok(res.categories.d.includes("Alimentation"));
+  assert.ok(!res.categories.d.includes("Courses"));
+});
+
+test("renameCategory refuse d'écraser une catégorie existante", () => {
+  const res = L.renameCategory(book(), "d", "Courses", "Loyer");
+  assert.equal(res.ok, false);
+  assert.match(res.message, /existe déjà/);
+});
+
+test("renameCategory accepte un simple changement de casse", () => {
+  const res = L.renameCategory(book([], { d: ["courses"], r: ["Salaire"] }), "d", "courses", "Courses");
+  assert.ok(res.ok);
+  assert.deepEqual(res.categories.d, ["Courses"]);
+});
+
+test("removeCategory replace les écritures dans Divers", () => {
+  const entries = [
+    { id: "1", type: "d", category: "Loisirs", amount: 100, date: "2026-09-01" },
+    { id: "2", type: "d", category: "Loisirs", amount: 100, date: "2026-09-02" },
+    { id: "3", type: "r", category: "Loisirs", amount: 100, date: "2026-09-03" }
+  ];
+  const res = L.removeCategory(book(entries), "d", "Loisirs");
+  assert.ok(res.ok);
+  assert.equal(res.moved, 2);
+  assert.equal(res.entries[0].category, "Divers");
+  assert.equal(res.entries[2].category, "Loisirs");
+  assert.ok(!res.categories.d.includes("Loisirs"));
+  assert.ok(res.categories.d.includes("Divers"));
+});
+
+test("removeCategory protège la catégorie de repli", () => {
+  const res = L.removeCategory(book(), "d", "Divers");
+  assert.equal(res.ok, false);
+  assert.match(res.message, /repli/);
+});
+
+test("countByCategory compte par sens, sans tenir compte des accents", () => {
+  const counted = L.countByCategory([
+    { type: "d", category: "Énergie" },
+    { type: "d", category: "energie" },
+    { type: "r", category: "Énergie" }
+  ], "d");
+  assert.equal(counted("Énergie"), 2);
+  assert.equal(counted("Courses"), 0);
+});
+
+test("sanitizeCategories répare un fichier abîmé", () => {
+  const clean = L.sanitizeCategories({ d: ["Courses", "  ", "courses", null, "Loyer"], r: "n'importe quoi" });
+  assert.deepEqual(clean.d, ["Courses", "Loyer"]);
+  assert.deepEqual(clean.r, L.CATEGORIES.r);
+  assert.deepEqual(L.sanitizeCategories(undefined), L.defaultCategories());
+  assert.deepEqual(L.sanitizeCategories({ d: [], r: [] }), L.defaultCategories());
+});
+
+test("les modifications de catégories ne touchent pas le livre d'origine", () => {
+  const original = book([{ id: "1", type: "d", category: "Courses", amount: 100, date: "2026-09-01" }]);
+  L.renameCategory(original, "d", "Courses", "Alimentation");
+  L.removeCategory(original, "d", "Courses");
+  L.addCategory(original, "d", "Coiffeur");
+  assert.equal(original.entries[0].category, "Courses");
+  assert.deepEqual(original.categories, L.defaultCategories());
+});
+
 test("centsToCsv écrit toujours deux décimales", () => {
   assert.equal(L.centsToCsv(2490), "24,90");
   assert.equal(L.centsToCsv(7), "0,07");

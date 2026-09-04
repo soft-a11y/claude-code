@@ -76,7 +76,10 @@
         </div>
 
         <div class="field field--wide">
-          <label for="fCat">Catégorie</label>
+          <div class="field__head">
+            <label for="fCat">Catégorie</label>
+            <button class="linkbtn" type="button" id="openCats">Gérer les catégories</button>
+          </div>
           <input id="fCat" type="text" list="catOptions" placeholder="Courses" autocomplete="off" maxlength="40">
           <datalist id="catOptions"></datalist>
         </div>
@@ -156,6 +159,31 @@
   <span id="toastMsg"></span>
   <button class="linkbtn" type="button" id="toastUndo" hidden>Annuler</button>
 </div>
+
+<dialog class="modal" id="catDialog" aria-labelledby="catDialogTitle">
+  <div class="modal__head">
+    <div>
+      <h2 id="catDialogTitle">Catégories</h2>
+      <p class="modal__intro">Deux listes séparées : ce qui sort et ce qui entre.</p>
+    </div>
+    <button class="step" type="button" id="catClose" aria-label="Fermer">×</button>
+  </div>
+
+  <div class="seg seg--wide" role="group" aria-label="Sens des catégories">
+    <button type="button" id="catTabDep" aria-pressed="true">Sortant · dépenses</button>
+    <button type="button" id="catTabRec" aria-pressed="false">Entrant · recettes</button>
+  </div>
+
+  <form class="catadd" id="catAddForm">
+    <input id="catNew" type="text" maxlength="40" placeholder="Nom de la nouvelle catégorie" autocomplete="off">
+    <button class="btn-primary" type="submit">Ajouter</button>
+  </form>
+
+  <p class="formerror" id="catError" hidden></p>
+
+  <ul class="catmanage" id="catManage"></ul>
+  <p class="modal__foot">Renommer une catégorie met à jour les écritures qui l'utilisent. La supprimer les fait repasser dans « Divers ».</p>
+</dialog>
 
 <script src="ledger.js"></script>
 <script src="app.js"></script>

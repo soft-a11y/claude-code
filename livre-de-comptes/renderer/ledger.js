@@ -153,11 +153,126 @@
     });
   }
 
-  function knownCategories(entries, type) {
+  /* ---------------------------------------------------------- catégories */
+
+  var FALLBACK_CATEGORY = "Divers";
+
+  function defaultCategories() {
+    return { d: CATEGORIES.d.slice(), r: CATEGORIES.r.slice() };
+  }
+
+  // Nettoie ce qui vient du fichier : on n'a aucune garantie sur son contenu.
+  function sanitizeCategories(stored) {
+    var out = { d: [], r: [] };
+    ["d", "r"].forEach(function (type) {
+      var list = stored && Array.isArray(stored[type]) ? stored[type] : CATEGORIES[type];
+      var seen = Object.create(null);
+      list.forEach(function (name) {
+        var clean = String(name == null ? "" : name).trim().slice(0, 40);
+        if (!clean || seen[normalize(clean)]) return;
+        seen[normalize(clean)] = true;
+        out[type].push(clean);
+      });
+      if (!out[type].length) out[type] = CATEGORIES[type].slice();
+    });
+    return out;
+  }
+
+  function cloneCategories(categories) {
+    return { d: categories.d.slice(), r: categories.r.slice() };
+  }
+
+  // La liste utilisable : celles que l'on a enregistrées, plus celles portées
+  // par des écritures (un import CSV peut en apporter de nouvelles).
+  function listCategories(book, type) {
     var seen = Object.create(null);
-    CATEGORIES[type].forEach(function (c) { seen[c] = true; });
-    entries.forEach(function (e) { if (e.type === type) seen[e.category] = true; });
-    return Object.keys(seen).sort(function (a, b) { return a.localeCompare(b, "fr"); });
+    var out = [];
+    function push(name) {
+      var clean = String(name == null ? "" : name).trim();
+      if (!clean || seen[normalize(clean)]) return;
+      seen[normalize(clean)] = true;
+      out.push(clean);
+    }
+    (book.categories && book.categories[type] ? book.categories[type] : CATEGORIES[type]).forEach(push);
+    (book.entries || []).forEach(function (e) { if (e.type === type) push(e.category); });
+    return out.sort(function (a, b) { return a.localeCompare(b, "fr"); });
+  }
+
+  function countByCategory(entries, type) {
+    var counts = Object.create(null);
+    (entries || []).forEach(function (e) {
+      if (e.type !== type) return;
+      var key = normalize(e.category);
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return function (name) { return counts[normalize(name)] || 0; };
+  }
+
+  function findCategory(book, type, name) {
+    var wanted = normalize(String(name == null ? "" : name).trim());
+    return listCategories(book, type).find(function (c) { return normalize(c) === wanted; }) || null;
+  }
+
+  function addCategory(book, type, name) {
+    var clean = String(name == null ? "" : name).trim().slice(0, 40);
+    if (!clean) return { ok: false, message: "Donnez un nom à la catégorie." };
+    var existing = findCategory(book, type, clean);
+    if (existing) return { ok: false, message: "« " + existing + " » existe déjà dans cette liste." };
+
+    var categories = cloneCategories(book.categories);
+    categories[type] = categories[type].concat([clean]);
+    return { ok: true, categories: categories, entries: book.entries, name: clean };
+  }
+
+  // Renommer suit les écritures : rien ne se retrouve orphelin.
+  function renameCategory(book, type, from, to) {
+    var clean = String(to == null ? "" : to).trim().slice(0, 40);
+    if (!clean) return { ok: false, message: "Donnez un nom à la catégorie." };
+    if (!findCategory(book, type, from)) return { ok: false, message: "Cette catégorie n'existe plus." };
+    if (normalize(clean) !== normalize(from) && findCategory(book, type, clean)) {
+      return { ok: false, message: "« " + clean + " » existe déjà dans cette liste." };
+    }
+
+    var categories = cloneCategories(book.categories);
+    var replaced = false;
+    categories[type] = categories[type].map(function (c) {
+      if (normalize(c) !== normalize(from)) return c;
+      replaced = true;
+      return clean;
+    });
+    if (!replaced) categories[type] = categories[type].concat([clean]);
+
+    var moved = 0;
+    var entries = (book.entries || []).map(function (e) {
+      if (e.type !== type || normalize(e.category) !== normalize(from)) return e;
+      moved++;
+      return Object.assign({}, e, { category: clean });
+    });
+    return { ok: true, categories: categories, entries: entries, moved: moved, name: clean };
+  }
+
+  // Supprimer ne perd aucune écriture : celles qui l'utilisaient repassent
+  // dans la catégorie par défaut.
+  function removeCategory(book, type, name) {
+    var target = findCategory(book, type, name);
+    if (!target) return { ok: false, message: "Cette catégorie n'existe plus." };
+    if (normalize(target) === normalize(FALLBACK_CATEGORY)) {
+      return { ok: false, message: "« " + FALLBACK_CATEGORY + " » sert de catégorie de repli, elle ne peut pas être supprimée." };
+    }
+
+    var categories = cloneCategories(book.categories);
+    categories[type] = categories[type].filter(function (c) { return normalize(c) !== normalize(target); });
+    if (!categories[type].some(function (c) { return normalize(c) === normalize(FALLBACK_CATEGORY); })) {
+      categories[type] = categories[type].concat([FALLBACK_CATEGORY]);
+    }
+
+    var moved = 0;
+    var entries = (book.entries || []).map(function (e) {
+      if (e.type !== type || normalize(e.category) !== normalize(target)) return e;
+      moved++;
+      return Object.assign({}, e, { category: FALLBACK_CATEGORY });
+    });
+    return { ok: true, categories: categories, entries: entries, moved: moved, name: target };
   }
 
   /* ------------------------------------------------------------ écriture */
@@ -369,6 +484,15 @@
   return {
     CATEGORIES: CATEGORIES,
     CSV_HEADER: CSV_HEADER,
+    FALLBACK_CATEGORY: FALLBACK_CATEGORY,
+    defaultCategories: defaultCategories,
+    sanitizeCategories: sanitizeCategories,
+    listCategories: listCategories,
+    countByCategory: countByCategory,
+    findCategory: findCategory,
+    addCategory: addCategory,
+    renameCategory: renameCategory,
+    removeCategory: removeCategory,
     parseAmount: parseAmount,
     toEuros: toEuros,
     centsToCsv: centsToCsv,
@@ -384,7 +508,6 @@
     normalize: normalize,
     search: search,
     sortByDateDesc: sortByDateDesc,
-    knownCategories: knownCategories,
     validate: validate,
     toCsv: toCsv,
     fromCsv: fromCsv,

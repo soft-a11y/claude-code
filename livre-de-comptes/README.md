@@ -36,7 +36,8 @@ confirmer via clic droit ▸ Ouvrir.
 
 **Saisir.** Choisissez Dépense ou Recette, tapez le montant (`24,90` ou
 `24.90`, les deux passent), un libellé, une catégorie — la liste propose les
-catégories déjà utilisées, mais vous pouvez en saisir une nouvelle.
+catégories connues, mais vous pouvez en saisir une nouvelle : elle rejoint
+la liste automatiquement.
 
 **Corriger.** Au survol d'une ligne, `✎` la reprend dans le formulaire et `×`
 la supprime — avec une possibilité d'annuler pendant quelques secondes.
@@ -51,16 +52,42 @@ catégorie, sans tenir compte des accents ni des majuscules.
 | --- | --- |
 | `⌘N` / `Ctrl+N` | Vider le formulaire pour une nouvelle écriture |
 | `⌘F` / `Ctrl+F` | Aller au champ de recherche |
+| `⌘K` / `Ctrl+K` | Ouvrir la gestion des catégories |
 | `⌘←` `⌘→` | Mois précédent, mois suivant |
 | `⌘T` / `Ctrl+T` | Revenir au mois courant |
 | `⌘E` / `Ctrl+E` | Exporter le mois affiché en CSV |
 | `⌘S` / `Ctrl+S` | Enregistrer une sauvegarde |
 | `Échap` | Annuler la recherche, ou la modification en cours |
 
+### Catégories
+
+Deux listes indépendantes : celles de l'argent qui **sort** (dépenses) et
+celles de l'argent qui **entre** (recettes). Un même nom peut exister des
+deux côtés sans que les deux se mélangent.
+
+Le lien *Gérer les catégories* sous le formulaire — ou **Livre ▸ Gérer les
+catégories…** (`⌘K`) — ouvre la liste du sens choisi, avec le nombre
+d'écritures qui utilisent chacune :
+
+- **Ajouter** : un nom, le bouton `Ajouter`. Les doublons sont refusés, sans
+  tenir compte des accents ni des majuscules (`energie` ne double pas
+  `Énergie`).
+- **Renommer** : cliquez dans le nom, corrigez, `Entrée`. Les écritures qui
+  utilisaient l'ancien nom suivent — rien ne se retrouve orphelin. `Échap`
+  annule la correction en cours.
+- **Supprimer** : le `×` de la ligne. Si des écritures l'utilisent,
+  l'application demande confirmation et les fait repasser dans « Divers ».
+  Aucune écriture n'est perdue. « Divers » sert de repli et ne peut pas être
+  supprimée.
+
+![La gestion des catégories](docs/categories.png)
+
 ### Import et export
 
 Menu **Fichier** : export CSV du mois ou de tout le livre, import CSV,
-sauvegarde et restauration au format JSON.
+sauvegarde et restauration au format JSON. Les catégories font partie de la
+sauvegarde JSON ; un import CSV qui apporte des catégories inconnues les
+ajoute à la liste du bon sens.
 
 Le CSV exporté a cinq colonnes séparées par des points-virgules et un BOM
 UTF-8, pour s'ouvrir directement dans Excel ou Numbers sans accents cassés :

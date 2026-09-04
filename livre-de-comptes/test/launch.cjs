@@ -44,8 +44,13 @@ app.whenReady().then(async () => {
   const menu = Menu.getApplicationMenu();
   check("le menu de l'application est en place", Boolean(menu));
   const fichier = menu && menu.items.find((i) => i.label === "Fichier");
-  check("le menu Fichier contient ses entrées", Boolean(fichier) && fichier.submenu.items.length >= 10,
-    fichier ? fichier.submenu.items.length + " entrées" : "menu absent");
+  check("le menu Fichier contient l'import et l'export", Boolean(fichier) &&
+    fichier.submenu.items.some((i) => i.label === "Importer un CSV…") &&
+    fichier.submenu.items.some((i) => i.label.startsWith("Exporter le mois")));
+
+  const livre = menu && menu.items.find((i) => i.label === "Livre");
+  check("le menu Livre ouvre la gestion des catégories", Boolean(livre) &&
+    livre.submenu.items.some((i) => i.label === "Gérer les catégories…"));
 
   const run = (js) => win.webContents.executeJavaScript(js, true);
 

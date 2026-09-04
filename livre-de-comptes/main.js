@@ -130,9 +130,6 @@ function buildMenu() {
     {
       label: "Fichier",
       submenu: [
-        { label: "Nouvelle écriture", accelerator: "CmdOrCtrl+N", click: () => send("new") },
-        { label: "Rechercher", accelerator: "CmdOrCtrl+F", click: () => send("search") },
-        { type: "separator" },
         { label: "Importer un CSV…", click: () => send("import-csv") },
         { label: "Exporter le mois en CSV…", accelerator: "CmdOrCtrl+E", click: () => send("export-csv-month") },
         { label: "Exporter tout en CSV…", click: () => send("export-csv-all") },
@@ -142,6 +139,18 @@ function buildMenu() {
         { type: "separator" },
         { label: "Afficher le fichier de données", click: () => shell.showItemInFolder(dataPath()) },
         ...(isMac ? [{ role: "close", label: "Fermer la fenêtre" }] : [{ role: "quit", label: "Quitter" }]),
+      ],
+    },
+    {
+      label: "Livre",
+      submenu: [
+        { label: "Nouvelle écriture", accelerator: "CmdOrCtrl+N", click: () => send("new") },
+        { label: "Rechercher", accelerator: "CmdOrCtrl+F", click: () => send("search") },
+        { type: "separator" },
+        { label: "Gérer les catégories…", accelerator: "CmdOrCtrl+K", click: () => send("categories") },
+        { type: "separator" },
+        { label: "Charger des données d'exemple", click: () => send("demo") },
+        { label: "Effacer toutes les données…", click: () => send("wipe") },
       ],
     },
     {
@@ -190,7 +199,6 @@ function buildMenu() {
       label: "Aide",
       submenu: [
         { label: "Où sont mes données ?", click: () => send("where") },
-        { label: "Charger des données d'exemple", click: () => send("demo") },
       ],
     },
   ];

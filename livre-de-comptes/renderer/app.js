@@ -97,15 +97,20 @@
   /* ---------------------------------------------------------------- état */
 
   var today = new Date();
-  var state = { version: 1, entries: [] };
+  var state = { version: 1, entries: [], categories: L.defaultCategories() };
   var view = L.isoOf(today).slice(0, 7);
   var draftType = "d";
   var editingId = null;
   var query = "";
   var demo = false;
 
+  // Ce que les fonctions de ledger.js attendent : les écritures et les listes.
+  function book() {
+    return { entries: state.entries, categories: state.categories };
+  }
+
   function persist() {
-    return api.save({ version: 1, entries: state.entries, demo: demo });
+    return api.save({ version: 1, entries: state.entries, categories: state.categories, demo: demo });
   }
 
   /* ------------------------------------------------------------- rendu */
@@ -339,7 +344,7 @@
   function fillCategoryOptions() {
     var list = $("catOptions");
     list.textContent = "";
-    L.knownCategories(state.entries, draftType).forEach(function (c) {
+    L.listCategories(book(), draftType).forEach(function (c) {
       var option = document.createElement("option");
       option.value = c;
       list.appendChild(option);
@@ -408,6 +413,11 @@
       return;
     }
 
+    // Une catégorie saisie à la volée entre dans la liste : elle survivra à
+    // la suppression de l'écriture qui l'a introduite.
+    var added = L.addCategory(book(), result.entry.type, result.entry.category);
+    if (added.ok) state.categories = added.categories;
+
     if (editingId) {
       var index = state.entries.findIndex(function (e) { return e.id === editingId; });
       if (index >= 0) {
@@ -428,6 +438,127 @@
   $("typeDep").addEventListener("click", function () { setType("d"); });
   $("typeRec").addEventListener("click", function () { setType("r"); });
   $("cancelEdit").addEventListener("click", function () { resetForm(); render(); });
+
+  /* -------------------------------------------------- gestion des catégories */
+
+  var catType = "d";
+
+  function openCategories() {
+    catType = draftType;
+    showCatError("");
+    $("catNew").value = "";
+    renderCategoryManager();
+    var dialog = $("catDialog");
+    if (!dialog.open) dialog.showModal();
+    $("catNew").focus();
+  }
+
+  function showCatError(message) {
+    var el = $("catError");
+    el.textContent = message || "";
+    el.hidden = !message;
+  }
+
+  function setCatType(type) {
+    catType = type;
+    $("catTabDep").setAttribute("aria-pressed", String(type === "d"));
+    $("catTabRec").setAttribute("aria-pressed", String(type === "r"));
+    showCatError("");
+    renderCategoryManager();
+  }
+
+  // Applique un résultat de ledger.js (ajout, renommage, suppression) et
+  // rafraîchit tout ce qui dépend des catégories.
+  function applyCategoryChange(result) {
+    if (!result.ok) {
+      showCatError(result.message);
+      renderCategoryManager();
+      return false;
+    }
+    state.categories = result.categories;
+    if (result.entries) state.entries = result.entries;
+    showCatError("");
+    persist();
+    renderCategoryManager();
+    render();
+    return true;
+  }
+
+  function renderCategoryManager() {
+    var host = $("catManage");
+    host.textContent = "";
+    var counted = L.countByCategory(state.entries, catType);
+
+    L.listCategories(book(), catType).forEach(function (name) {
+      var used = counted(name);
+      var li = document.createElement("li");
+      li.dataset.category = name;
+
+      var input = document.createElement("input");
+      input.className = "catmanage__name";
+      input.type = "text";
+      input.value = name;
+      input.maxLength = 40;
+      input.setAttribute("aria-label", "Nom de la catégorie « " + name + " »");
+
+      function commit() {
+        var next = input.value.trim();
+        if (!next || next === name) { input.value = name; return; }
+        if (!applyCategoryChange(L.renameCategory(book(), catType, name, next))) input.value = name;
+      }
+
+      input.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter") { ev.preventDefault(); input.blur(); }
+        if (ev.key === "Escape") { ev.stopPropagation(); input.value = name; input.blur(); }
+      });
+      input.addEventListener("blur", commit);
+
+      var count = document.createElement("span");
+      count.className = "catmanage__count";
+      count.textContent = used ? used + (used > 1 ? " écritures" : " écriture") : "inutilisée";
+
+      var del = document.createElement("button");
+      del.type = "button";
+      del.className = "rowbtn del";
+      del.textContent = "×";
+      del.setAttribute("aria-label", "Supprimer la catégorie « " + name + " »");
+      del.addEventListener("click", function () { removeCategory(name, used); });
+
+      li.appendChild(input);
+      li.appendChild(count);
+      li.appendChild(del);
+      host.appendChild(li);
+    });
+  }
+
+  function removeCategory(name, used) {
+    if (!used) {
+      applyCategoryChange(L.removeCategory(book(), catType, name));
+      return;
+    }
+    api.confirm({
+      message: "Supprimer la catégorie « " + name + " » ?",
+      detail: used + (used > 1 ? " écritures passeront" : " écriture passera") + " dans « " + L.FALLBACK_CATEGORY + " ».",
+      confirmLabel: "Supprimer"
+    }).then(function (ok) {
+      if (ok) applyCategoryChange(L.removeCategory(book(), catType, name));
+    });
+  }
+
+  $("catAddForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var name = $("catNew").value;
+    // Pas de bandeau de confirmation ici : il passerait sous la fenêtre
+    // modale. La liste qui s'allonge est la confirmation.
+    if (applyCategoryChange(L.addCategory(book(), catType, name))) $("catNew").value = "";
+    $("catNew").focus();
+  });
+
+  $("openCats").addEventListener("click", openCategories);
+  $("catTabDep").addEventListener("click", function () { setCatType("d"); });
+  $("catTabRec").addEventListener("click", function () { setCatType("r"); });
+  $("catClose").addEventListener("click", function () { $("catDialog").close(); });
+  $("catDialog").addEventListener("close", function () { fillCategoryOptions(); });
 
   /* ------------------------------------------------------ suppression */
 
@@ -487,6 +618,7 @@
 
   document.addEventListener("keydown", function (ev) {
     if (ev.key === "Escape") {
+      if ($("catDialog").open) return; // la fenêtre modale se ferme d'elle-même
       if (query) { $("searchClear").click(); return; }
       if (editingId) { resetForm(); render(); }
     }
@@ -535,6 +667,10 @@
         if (!ok) return;
         parsed.entries.forEach(function (e) {
           state.entries.push(Object.assign({ id: newId(), created: Date.now() }, e));
+          // Les catégories apportées par le fichier rejoignent la liste du
+          // sens correspondant, pour survivre à la suppression des écritures.
+          var added = L.addCategory(book(), e.type, e.category);
+          if (added.ok) state.categories = added.categories;
         });
         demo = false;
         persist();
@@ -545,7 +681,10 @@
   }
 
   function backup() {
-    api.saveJson("livre-de-comptes-" + stamp() + ".json", JSON.stringify({ version: 1, entries: state.entries }, null, 2))
+    api.saveJson(
+      "livre-de-comptes-" + stamp() + ".json",
+      JSON.stringify({ version: 1, entries: state.entries, categories: state.categories }, null, 2)
+    )
       .then(function (res) {
         if (res && res.ok) toast("Sauvegarde enregistrée.");
       });
@@ -569,6 +708,7 @@
         state.entries = parsed.entries.map(function (e) {
           return Object.assign({ id: newId(), created: Date.now() }, e);
         });
+        state.categories = L.sanitizeCategories(parsed.categories);
         demo = false;
         resetForm();
         persist();
@@ -583,6 +723,7 @@
       state.entries = L.buildDemo(today).map(function (e) {
         return Object.assign({ id: newId(), created: Date.now() }, e);
       });
+      state.categories = L.defaultCategories();
       demo = true;
       view = L.isoOf(today).slice(0, 7);
       // Un 3 du mois, le mois courant est presque vide : on ouvre sur le
@@ -609,6 +750,7 @@
     }).then(function (ok) {
       if (!ok) return;
       state.entries = [];
+      state.categories = L.defaultCategories();
       demo = false;
       view = L.isoOf(today).slice(0, 7);
       resetForm();
@@ -636,12 +778,14 @@
     prev: function () { view = L.shiftMonth(view, -1); render(); },
     next: function () { view = L.shiftMonth(view, 1); render(); },
     today: function () { view = L.isoOf(today).slice(0, 7); render(); },
+    categories: openCategories,
     "import-csv": importCsv,
     "export-csv-month": function () { exportCsv("month"); },
     "export-csv-all": function () { exportCsv("all"); },
     backup: backup,
     restore: restore,
     demo: loadDemo,
+    wipe: wipe,
     where: function () {
       api.dataPath().then(function (path) {
         api.info({
@@ -661,6 +805,7 @@
 
   function boot(data) {
     demo = Boolean(data.demo);
+    state.categories = L.sanitizeCategories(data.categories);
     state.entries = (data.entries || []).map(function (e) {
       return {
         id: e.id || newId(),
