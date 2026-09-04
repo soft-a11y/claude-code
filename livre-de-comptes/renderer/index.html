@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:;">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Livre de comptes</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="shell">
+
+  <header class="masthead">
+    <div class="brand">
+      <h1>Livre de comptes</h1>
+      <p class="tagline">Recettes, dépenses et solde, mois par mois.</p>
+    </div>
+    <nav class="monthnav" aria-label="Choix du mois">
+      <button class="step" id="prev" type="button" aria-label="Mois précédent">‹</button>
+      <span class="monthnav__label" id="monthLabel">—</span>
+      <button class="step" id="next" type="button" aria-label="Mois suivant">›</button>
+      <button class="today" id="today" type="button" hidden>Ce mois-ci</button>
+    </nav>
+  </header>
+
+  <section class="balance" aria-label="Résumé du mois">
+    <div class="balance__main">
+      <p class="eyebrow eyebrow--flush">Solde de <span id="soldeMonth">—</span></p>
+      <p class="figure-xl" id="soldeValue">—</p>
+      <p class="balance__cum">Solde cumulé depuis le début du livre : <b id="soldeCumule">—</b></p>
+    </div>
+    <dl class="balance__side">
+      <div><dt>Recettes</dt><dd class="is-rec" id="sumRec">—</dd></div>
+      <div><dt>Dépenses</dt><dd class="is-dep" id="sumDep">—</dd></div>
+      <div><dt>Écritures</dt><dd id="sumCount">—</dd></div>
+    </dl>
+  </section>
+
+  <div class="banner" id="demoBanner" hidden>
+    <span><strong>Données d'exemple.</strong> Ces écritures sont fictives, pour montrer le livre en fonctionnement.</span>
+    <span class="spacer"></span>
+    <button class="linkbtn" type="button" id="clearDemo">Tout effacer et partir de zéro</button>
+  </div>
+
+  <div class="grid">
+
+    <section class="panel" aria-labelledby="ledgerTitle">
+      <div class="panel__head">
+        <h2 id="ledgerTitle">Écritures</h2>
+        <span class="meta" id="ledgerMeta"></span>
+      </div>
+
+      <form class="entry" id="entryForm" novalidate>
+        <div class="entry__seg">
+          <div class="seg" role="group" aria-label="Nature de l'écriture">
+            <button type="button" id="typeDep" aria-pressed="true">Dépense</button>
+            <button type="button" id="typeRec" aria-pressed="false">Recette</button>
+          </div>
+          <span class="entry__mode" id="entryMode" hidden>Modification en cours</span>
+        </div>
+
+        <div class="field">
+          <label for="fAmount">Montant (€)</label>
+          <input class="num-input" id="fAmount" type="text" inputmode="decimal" placeholder="0,00" autocomplete="off">
+        </div>
+
+        <div class="field">
+          <label for="fDate">Date</label>
+          <input id="fDate" type="date">
+        </div>
+
+        <div class="field field--wide">
+          <label for="fLabel">Libellé</label>
+          <input id="fLabel" type="text" placeholder="Courses de la semaine" autocomplete="off" maxlength="80">
+        </div>
+
+        <div class="field field--wide">
+          <label for="fCat">Catégorie</label>
+          <input id="fCat" type="text" list="catOptions" placeholder="Courses" autocomplete="off" maxlength="40">
+          <datalist id="catOptions"></datalist>
+        </div>
+
+        <div class="entry__submit">
+          <button class="btn-primary" id="submitBtn" type="submit">Enregistrer</button>
+          <button class="btn-ghost" id="cancelEdit" type="button" hidden>Annuler</button>
+          <p class="formerror" id="formError" hidden></p>
+        </div>
+      </form>
+
+      <div class="searchbar">
+        <input id="search" type="search" placeholder="Rechercher un libellé ou une catégorie…" autocomplete="off">
+        <button class="linkbtn" type="button" id="searchClear" hidden>Effacer</button>
+      </div>
+
+      <div class="ledger__scroll">
+        <table id="ledger">
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Libellé</th>
+              <th scope="col" class="right">Montant</th>
+              <th scope="col"><span class="sr">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody id="ledgerBody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="ledgerEmpty" hidden>
+        <b id="emptyTitle">Aucune écriture ce mois-ci</b>
+        <span id="emptyHint">Ajoutez une dépense ou une recette avec le formulaire ci-dessus.</span>
+      </div>
+    </section>
+
+    <aside class="side">
+
+      <section class="panel" aria-labelledby="catTitle">
+        <div class="panel__head">
+          <h2 id="catTitle">Dépenses par catégorie</h2>
+          <span class="meta" id="catMeta"></span>
+        </div>
+        <div class="chart-body">
+          <div class="catlist" id="catList" role="img" aria-label="Répartition des dépenses du mois par catégorie"></div>
+          <p class="empty empty--inline" id="catEmpty" hidden>Pas de dépense enregistrée sur ce mois.</p>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="evoTitle">
+        <div class="panel__head">
+          <h2 id="evoTitle">Six derniers mois</h2>
+          <span class="meta" id="evoMax"></span>
+        </div>
+        <div class="legend">
+          <span><i class="rec"></i> Recettes</span>
+          <span><i class="dep"></i> Dépenses</span>
+        </div>
+        <div class="evo" id="evo" role="img" aria-label="Recettes et dépenses des six derniers mois"></div>
+      </section>
+
+    </aside>
+  </div>
+
+  <footer class="colophon">
+    <span id="storeInfo">Vos écritures sont enregistrées sur cet ordinateur.</span>
+    <span class="colophon__actions">
+      <button class="linkbtn" type="button" id="reveal" hidden>Afficher le fichier</button>
+      <button class="linkbtn" type="button" id="wipe">Effacer toutes les données</button>
+    </span>
+  </footer>
+
+</div>
+
+<div class="tip" id="tip" role="status" aria-live="off"></div>
+
+<div class="toast" id="toast">
+  <span id="toastMsg"></span>
+  <button class="linkbtn" type="button" id="toastUndo" hidden>Annuler</button>
+</div>
+
+<script src="ledger.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

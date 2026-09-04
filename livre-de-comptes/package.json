@@ -1,0 +1,48 @@
+{
+  "name": "livre-de-comptes",
+  "version": "1.0.0",
+  "description": "Comptabilité personnelle : recettes, dépenses et solde, mois par mois. Application de bureau, données stockées localement.",
+  "main": "main.js",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test \"test/*.test.cjs\"",
+    "test:app": "xvfb-run -a electron test/launch.cjs",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^44.2.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.brandappart.livredecomptes",
+    "productName": "Livre de comptes",
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**"
+    ],
+    "mac": {
+      "category": "public.app-category.finance",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Office"
+    }
+  }
+}
