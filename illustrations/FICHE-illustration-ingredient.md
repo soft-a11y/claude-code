@@ -100,9 +100,9 @@ Le verdict est celui de l'humain, jamais celui de l'agent. Tant qu'il n'a pas tr
 
 | Date | Ingrédient | Identifiants (3) | 2ᵉ référence utilisée | Verdict humain | Remarque |
 |---|---|---|---|---|---|
-| 2026-09-04 | Poireau | `4RYyHfS9Aa` `Sy3lv86Ub8` `eICD47LdqL` | aucune — registre § 8 vide | `en attente` | Recette suivie sinon à la lettre. |
-| 2026-09-04 | Avocat | `gOishENSXO` `lJ6LmCMgv9` `KL7be8akqp` | aucune — registre § 8 vide | `en attente` | Fruit à noyau, coupé ou entier laissé au modèle. |
-| 2026-09-04 | Chocolat noir | `UPRgaxGwny` `dtEp90zXSL` `xSP1ob3jfW` | aucune — registre § 8 vide | `en attente` | Choisi pour éprouver les tons sombres, absents de la palette. |
+| 2026-09-04 | Poireau | `4RYyHfS9Aa` `Sy3lv86Ub8` `eICD47LdqL` | aucune — registre § 8 vide | `en attente` | Grille : #1 et #3 fond orange plein, #1 porte un visage de dessin animé. #2 est la seule sur fond blanc — forme juste, contour correct, mais dégradé dans le vert. |
+| 2026-09-04 | Avocat | `gOishENSXO` `lJ6LmCMgv9` `KL7be8akqp` | aucune — registre § 8 vide | `en attente` | Grille : 3/3 hors sujet. Le modèle a lu « avocat » comme la profession — deux hommes en costume avec balance et code civil, un fruit en costume. Homonymie du mot français. |
+| 2026-09-04 | Chocolat noir | `UPRgaxGwny` `dtEp90zXSL` `xSP1ob3jfW` | aucune — registre § 8 vide | `en attente` | Grille : 3/3 échouent sur trois points — texte d'emballage (« CHOCOLAT NOIR », « 70% CACAO »), fond vert ou orange, et scène à plusieurs objets (tablette + cabosse + feuilles + éclats) au lieu d'un seul. |
 
 ### 6. Amendements proposés
 
@@ -112,6 +112,9 @@ une exception à la grille), l'agent **propose** ici. Il ne l'applique pas.
 | N° | Date | Ce que ça change (§ visé) | Preuve (lignes du § 5) | Statut |
 |---|---|---|---|---|
 | A1 | 2026-09-04 | § 2 — prévoir le cas où aucune validée n'existe encore pour la nature demandée : autoriser l'ancre seule, ou nommer une validée de repli. En l'état la recette n'est pas applicable telle quelle tant que le § 8 est vide. | Les 3 essais du 2026-09-04 | `proposé` |
+| A2 | 2026-09-04 | § 1 ou § 2 — le fond blanc n'est pas obtenu : 6 variantes sur 9 sortent sur un aplat orange ou vert. L'ancre est la carotte, dont l'orange semble lu comme une couleur de fond. À traiter par une 2ᵉ référence sur fond blanc franc, non par le prompt. | Poireau #1 #3, Avocat #2 #3, Chocolat #1 #2 #3 | `proposé` |
+| A3 | 2026-09-04 | § 1 — nommer l'ingrédient sans ambiguïté dans le prompt (« un avocat, le fruit »). Ce n'est pas réécrire le prompt ni décrire le style : c'est désigner l'objet. Sans quoi les homonymes français sortent faux à tous les coups. | Avocat, 3 variantes sur 3 | `proposé` |
+| A4 | 2026-09-04 | § 4 — les produits emballés (tablette, boîte, sachet) tirent le modèle vers le texte et la scène composée. Soit les nommer par leur contenu (« des carrés de chocolat noir »), soit les traiter comme une catégorie à part. | Chocolat noir, 3 variantes sur 3 | `proposé` |
 
 Un amendement `ratifié` est ensuite reporté dans la Partie A par l'agent, **en citant son numéro** dans la colonne « Pourquoi »
 ou en note sous le paragraphe modifié. `version` en tête de fiche s'incrémente.
